@@ -37,6 +37,17 @@ A windshield mount does not keep the app foregrounded. Locking the screen or ope
 - `CBCentralManager` uses `CBCentralManagerOptionRestoreIdentifierKey`. Restoration and relaunch depend on pending BLE operations and system conditions. A force-quit app is not relaunched by iOS. The app does its own reconnect logic and does not assume the system will.
 - The switch off ends location and BLE activity and clears the pending connect.
 
+## Radio handover
+
+The dongle shares one radio between BLE and WiFi. During a trip BLE is active and WiFi is off. After engine off (Trailing to Idle) the dongle stops advertising, disconnects the phone, and runs WiFi sync, typically 30-60 s. Then BLE resumes advertising. Before standby, BLE stops; on wake, it resumes.
+
+What the app does about it:
+
+- A disconnect is a link loss, not a failure. `CairnBLEManager.linkLost()` ends the driving session (stopping location), shows "Connecting", and re-issues `connect`. A pending connect completes when the dongle advertises again. Only protocol or pairing refusals set `.failed`.
+- The bond survives dongle reboots, so reconnects are encrypted without re-pairing.
+- Sparse fixes while parked are fine. `.automotiveNavigation` delivers roughly every 6 s when stationary; the firmware's 3 s staleness window rejects those, and the dongle does not need phone GPS while parked.
+- `COMPANION_STATUS` counters restart on every connection. `DrivingSession.beginDriving()` resets the app's own sent / dropped counts when the link becomes ready so the two stay comparable.
+
 ## Pairing
 
 First pairing is manual and in the foreground: the first read of an encrypted characteristic makes iOS ask for the dongle's static 6-digit passkey. iOS then stores the bond and later reconnects are silent. The dongle holds one bond; a new phone replaces the old one. If the dongle's bond is reset (boot-time button or firmware command), remove "Cairn" under Settings > Bluetooth > (i) > Forget This Device on the phone, then pair again. The app cannot remove an iOS bond itself.

@@ -245,7 +245,7 @@ private struct Card<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.primary.opacity(0.06)))
         .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
@@ -291,7 +291,7 @@ private struct Metric: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tileSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
@@ -312,7 +312,7 @@ private struct Placeholder: View {
 private struct Backdrop: View {
     var body: some View {
         ZStack(alignment: .top) {
-            Color(.systemGroupedBackground)
+            Color.pageSurface
             RadialGradient(
                 colors: [Color.accentColor.opacity(0.18), .clear],
                 center: .top, startRadius: 0, endRadius: 360
@@ -323,4 +323,17 @@ private struct Backdrop: View {
 
 private extension Array {
     subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}
+
+/// Grouped-list surfaces on iOS; the macOS equivalents only keep the package building for `swift test`.
+private extension Color {
+    #if canImport(UIKit)
+    static let pageSurface = Color(.systemGroupedBackground)
+    static let cardSurface = Color(.secondarySystemGroupedBackground)
+    static let tileSurface = Color(.tertiarySystemGroupedBackground)
+    #else
+    static let pageSurface = Color(nsColor: .windowBackgroundColor)
+    static let cardSurface = Color(nsColor: .controlBackgroundColor)
+    static let tileSurface = Color(nsColor: .underPageBackgroundColor)
+    #endif
 }

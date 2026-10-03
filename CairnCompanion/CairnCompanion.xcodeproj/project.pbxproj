@@ -10,6 +10,7 @@
 		010AB516EFBEAE671DE70836 /* CairnCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */; };
 		49C8AA998882F97D98D9C1A2 /* CairnRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 8194D8111923C50345AEDD47 /* CairnRuntime */; };
 		A2F12BC86A2E4BE3DF4FB1F1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F25C8E5071A70524FB14CEF0 /* Assets.xcassets */; };
+		DEBE330B7297E0BCA57160A3 /* DemoMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2660E6B18D6287323804A65 /* DemoMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -17,6 +18,7 @@
 		490683BC313B464740E9D585 /* CairnCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CairnCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56A8902795E41E4DCED67606 /* CairnCompanion */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CairnCompanion; path = .; sourceTree = SOURCE_ROOT; };
 		5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CairnCompanionApp.swift; sourceTree = "<group>"; };
+		A2660E6B18D6287323804A65 /* DemoMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMode.swift; sourceTree = "<group>"; };
 		CB371EDA615C2376801123BF /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		F25C8E5071A70524FB14CEF0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -38,6 +40,7 @@
 			children = (
 				F25C8E5071A70524FB14CEF0 /* Assets.xcassets */,
 				5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */,
+				A2660E6B18D6287323804A65 /* DemoMode.swift */,
 				2C915BBCB042E798AC2B2C03 /* Info.plist */,
 			);
 			path = App;
@@ -154,6 +157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				010AB516EFBEAE671DE70836 /* CairnCompanionApp.swift in Sources */,
+				DEBE330B7297E0BCA57160A3 /* DemoMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
