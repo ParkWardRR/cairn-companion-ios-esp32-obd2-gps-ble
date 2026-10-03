@@ -62,6 +62,9 @@ public final class DrivingSession {
     private func beginDriving() {
         guard state.isArmed, !state.isDriving else { return }
         state.isDriving = true
+        // The dongle's COMPANION_STATUS counters restart on every connection, so ours do too.
+        state.sentCount = 0
+        state.droppedCount = 0
         throttle.reset()
         #if os(iOS)
         backgroundSession = CLBackgroundActivitySession()
