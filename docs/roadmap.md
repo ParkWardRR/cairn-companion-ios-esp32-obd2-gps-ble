@@ -4,6 +4,10 @@ Checkboxes are the Phase 1 work items from the plan. The iOS app is built and ru
 
 Firmware items are checked only where confirmed on hardware. The [Cairn](https://github.com/ParkWardRR/Cairn) repo is the source of truth for the rest.
 
+## Current focus
+
+Phase 1 is waiting on a device and the firmware repo: background validation, the drive test, and the firmware rows. App-side Phase 2 payloads are built; they stay dormant until the firmware exposes `BARO_ALT` and `UTC_SYNC`. The firmware work list is in [HANDOFF-FIRMWARE.md](../HANDOFF-FIRMWARE.md).
+
 ## Phase 0 — Design ✅
 
 - [x] Plan, protocol v1, platform corrections, design review folded in
@@ -40,15 +44,17 @@ Firmware items are checked only where confirmed on hardware. The [Cairn](https:/
 - [x] Decode `GNSS_QUALITY` and `COMPANION_STATUS` (layouts still proposed)
 - [x] Single screen: auto-connect, phone vs internal, acceptance feedback
 - [x] Debug-only demo mode (`CAIRN_DEMO`) for simulator screenshots
-- [ ] Golden-vector tests shared with firmware
+- [x] Golden-vector tests: [golden-vectors.json](golden-vectors.json) from an independent spec implementation, replayed by the iOS tests
+- [ ] Firmware repo consumes `golden-vectors.json`
 - [ ] Drive test: phone vs internal accuracy, battery, write rate
 
 **Exit:** all rows in [validation.md](validation.md) pass.
 
 ## Phase 2 — Enrichment
 
-- [ ] `BARO_ALT` (CMAltimeter, relative)
-- [ ] `UTC_SYNC` (phone wall clock)
+- [x] `BARO_ALT` app side: payload, golden vectors, `CMAltimeter` stream, sent only if the dongle exposes it. Not run against firmware or a device
+- [x] `UTC_SYNC` app side: payload, golden vectors, sent on link-ready and every 60 s if exposed. Not run against firmware or a device
+- [ ] Firmware: `BARO_ALT` and `UTC_SYNC` characteristics
 - [ ] Compass heading (`CLHeading`)
 - [ ] `OBD_LIVE`, `DEVICE_STATUS` notify
 - [ ] Live dashboard

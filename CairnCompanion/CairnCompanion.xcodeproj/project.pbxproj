@@ -235,6 +235,7 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Cairn Companion reads the barometer to send relative altitude to your Cairn device.";
 				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -259,6 +260,7 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Cairn Companion reads the barometer to send relative altitude to your Cairn device.";
 				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -34,6 +34,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Cairn Companion streams your phone's location to your Cairn device during a driving session.
+        INFOPLIST_KEY_NSMotionUsageDescription: Cairn Companion reads the barometer to send relative altitude to your Cairn device.
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.
     info:
       path: App/Info.plist

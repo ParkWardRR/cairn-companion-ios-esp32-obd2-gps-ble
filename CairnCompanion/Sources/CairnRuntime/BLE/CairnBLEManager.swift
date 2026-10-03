@@ -21,6 +21,9 @@ public final class CairnBLEManager: NSObject {
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var fixCharacteristic: CBCharacteristic?
+    /// Phase 2 characteristics; nil when the dongle firmware does not expose them.
+    private var baroCharacteristic: CBCharacteristic?
+    private var utcCharacteristic: CBCharacteristic?
     private var wantsConnection = false
     private var reconnectTask: Task<Void, Never>?
     private var streamingTask: Task<Void, Never>?
@@ -61,9 +64,15 @@ public final class CairnBLEManager: NSObject {
         central.stopScan()
         if let peripheral { central.cancelPeripheralConnection(peripheral) }
         peripheral = nil
-        fixCharacteristic = nil
+        clearCharacteristics()
         state.resetDeviceState()
         state.connection = .idle
+    }
+
+    private func clearCharacteristics() {
+        fixCharacteristic = nil
+        baroCharacteristic = nil
+        utcCharacteristic = nil
     }
 
     public func send(_ payload: GNSSFixPayload) -> SendResult {
@@ -77,6 +86,34 @@ public final class CairnBLEManager: NSObject {
         }
         peripheral.writeValue(payload.data, for: fixCharacteristic, type: .withoutResponse)
         return .sent
+    }
+
+    /// Phase 2 `BARO_ALT`. Returns false when the dongle does not expose it or the radio is backed up.
+    @discardableResult
+    public func send(_ payload: BaroAltPayload) -> Bool {
+        write(payload.data, to: baroCharacteristic)
+    }
+
+    /// Phase 2 `UTC_SYNC`. Returns false when the dongle does not expose it or the radio is backed up.
+    @discardableResult
+    public func send(_ payload: UTCSyncPayload) -> Bool {
+        write(payload.data, to: utcCharacteristic)
+    }
+
+    /// Whether the connected dongle exposes `BARO_ALT` / `UTC_SYNC`.
+    public var supportsBaroAlt: Bool { baroCharacteristic != nil }
+    public var supportsUTCSync: Bool { utcCharacteristic != nil }
+
+    /// Uses write-without-response when the characteristic offers it, otherwise a confirmed write.
+    private func write(_ data: Data, to characteristic: CBCharacteristic?) -> Bool {
+        guard state.connection == .ready, let peripheral, let characteristic else { return false }
+        if characteristic.properties.contains(.writeWithoutResponse) {
+            guard peripheral.canSendWriteWithoutResponse else { return false }
+            peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+        } else {
+            peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        }
+        return true
     }
 
     // MARK: Connection
@@ -132,7 +169,7 @@ public final class CairnBLEManager: NSObject {
     private func linkLost() {
         trace("linkLost, reconnect in \(Self.reconnectDelay)")
         streamingTask?.cancel()
-        fixCharacteristic = nil
+        clearCharacteristics()
         state.resetDeviceState()
         if wantsConnection { state.connection = .connecting }
         onLinkLost?()
@@ -239,7 +276,8 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
         else { return fail("Cairn service not found") }
         peripheral.discoverCharacteristics(
             [CairnGATTProfile.gnssFix, CairnGATTProfile.gnssQuality,
-             CairnGATTProfile.companionStatus, CairnGATTProfile.protocolVersion],
+             CairnGATTProfile.companionStatus, CairnGATTProfile.protocolVersion,
+             CairnGATTProfile.baroAlt, CairnGATTProfile.utcSync],
             for: service
         )
     }
@@ -258,6 +296,8 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
             return fail("Device is missing required characteristics")
         }
         fixCharacteristic = fix
+        baroCharacteristic = found[CairnGATTProfile.baroAlt]
+        utcCharacteristic = found[CairnGATTProfile.utcSync]
         // Every characteristic needs an encrypted, authenticated link; the first access prompts for the passkey.
         peripheral.readValue(for: version)
         for uuid in [CairnGATTProfile.gnssQuality, CairnGATTProfile.companionStatus] {

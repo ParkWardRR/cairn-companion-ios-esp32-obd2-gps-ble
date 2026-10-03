@@ -2,7 +2,7 @@
 
 Custom GATT service between the iPhone (central) and the Cairn ESP32 dongle (peripheral). Typed characteristics, fixed binary layouts, little-endian, no CBOR/JSON/strings on the wire.
 
-The firmware-side copy of this spec will live at `docs/ble-companion-protocol.md` in [ParkWardRR/Cairn](https://github.com/ParkWardRR/Cairn). Protocol changes must update both repos; golden byte vectors are shared as test fixtures.
+The firmware-side copy of this spec will live at `docs/ble-companion-protocol.md` in [ParkWardRR/Cairn](https://github.com/ParkWardRR/Cairn). Protocol changes must update both repos; golden byte vectors are shared as test fixtures in [golden-vectors.json](golden-vectors.json). They come from an independent Python implementation of this spec, and the iOS tests replay them.
 
 ## Discovery
 
@@ -60,6 +60,22 @@ Core Location exposes no DGPS/RTK state, DOP, satellite count, or constellations
 - Position: WGS-84 (matches bundle format v2).
 - Altitude: height above the WGS-84 ellipsoid, as the bundle format specifies, not MSL.
 - `heading_cdeg`: course over ground, not compass heading. `CLHeading` is a Phase 2 enrichment.
+
+## `BARO_ALT` (4 bytes, Phase 2, phone → device)
+
+| Off | Size | Field | Type | Units / sentinel |
+|---:|---:|---|---|---|
+| 0 | 4 | `rel_alt_cm` | i32 | cm relative to where `CMAltimeter` updates started; `0x7FFFFFFF` = invalid; clamped to `0x7FFFFFFE` |
+
+Relative barometric altitude, not MSL and not the GNSS ellipsoid. The dongle should not mix it with `alt_cm` without a reference.
+
+## `UTC_SYNC` (8 bytes, Phase 2, phone → device)
+
+| Off | Size | Field | Type | Units / sentinel |
+|---:|---:|---|---|---|
+| 0 | 8 | `unix_ms` | u64 | phone wall clock, Unix milliseconds; sent on connect and about once a minute |
+
+The app sends both only when the dongle exposes the characteristic, using write-without-response when offered, otherwise a confirmed write.
 
 ## Staleness and timing
 

@@ -13,6 +13,10 @@ public enum CairnGATTProfile {
     public static var companionStatus: CBUUID { uuid(suffix: "0011") }
     public static var protocolVersion: CBUUID { uuid(suffix: "00F0") }
 
+    /// Phase 2 writes. Optional: the app uses them only if the dongle exposes them.
+    public static var baroAlt: CBUUID { uuid(suffix: "0002") }
+    public static var utcSync: CBUUID { uuid(suffix: "0003") }
+
     /// Minimum `maximumWriteValueLength(for: .withoutResponse)` needed to send a `GNSS_FIX`.
     public static var requiredWriteLength: Int { GNSSFixPayload.size }
 

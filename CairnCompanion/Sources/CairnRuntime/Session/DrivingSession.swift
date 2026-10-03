@@ -17,6 +17,9 @@ public final class DrivingSession {
     private var backgroundSession: CLBackgroundActivitySession?
     #endif
     private var locationTask: Task<Void, Never>?
+    private var utcTask: Task<Void, Never>?
+    private var baroTask: Task<Void, Never>?
+    private static let utcSyncInterval: Duration = .seconds(60)
     private var throttle = TransmitThrottle()
     private var seq: UInt16 = 0
 
@@ -74,12 +77,36 @@ public final class DrivingSession {
                 self?.handle(event)
             }
         }
+        startEnrichment()
+    }
+
+    /// Phase 2 writes, sent only if the dongle exposes the characteristic.
+    private func startEnrichment() {
+        if ble.supportsUTCSync {
+            utcTask = Task { [weak self] in
+                while !Task.isCancelled {
+                    self?.ble.send(UTCSyncPayload(date: Date()))
+                    try? await Task.sleep(for: Self.utcSyncInterval)
+                }
+            }
+        }
+        if ble.supportsBaroAlt, BaroStream.isAvailable {
+            baroTask = Task { [weak self] in
+                for await reading in BaroStream.readings() {
+                    self?.ble.send(reading)
+                }
+            }
+        }
     }
 
     private func endDriving() {
         guard state.isDriving else { return }
         locationTask?.cancel()
         locationTask = nil
+        utcTask?.cancel()
+        utcTask = nil
+        baroTask?.cancel()
+        baroTask = nil
         #if os(iOS)
         backgroundSession?.invalidate()
         backgroundSession = nil
