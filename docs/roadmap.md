@@ -1,6 +1,6 @@
 # Roadmap
 
-Checkboxes are the Phase 1 work items from the plan. Nothing is built yet.
+Checkboxes are the Phase 1 work items from the plan. The iOS protocol core (`CairnCompanion/`, `swift test`) is built; the app, BLE manager, and firmware are not.
 
 ## Phase 0 — Design ✅
 
@@ -26,13 +26,13 @@ Checkboxes are the Phase 1 work items from the plan. Nothing is built yet.
 **iOS** (this repo)
 
 - [ ] SwiftUI + Observation app, iOS 17
-- [ ] `liveUpdates(.automotiveNavigation)`, ~1 Hz transmit filter
-- [ ] Validity mapping, 2 s staleness drop, clamped accuracy
-- [ ] 28 B `GNSS_FIX` encoder with `sample_age_ms`, `seq`, flags
-- [ ] CoreBluetooth: scan by service UUID, bond, state restoration, write flow control
-- [ ] `CLBackgroundActivitySession` + `location` / `bluetooth-central` modes
-- [ ] Decode `GNSS_QUALITY` and `COMPANION_STATUS`
-- [ ] Single screen: session control, phone vs internal, acceptance feedback
+- [ ] `liveUpdates(.automotiveNavigation)`, ~1 Hz transmit filter (code + throttle tests done; not run on a device)
+- [x] Validity mapping, 2 s staleness drop, clamped accuracy
+- [x] 28 B `GNSS_FIX` encoder with `sample_age_ms`, `seq`, flags
+- [ ] CoreBluetooth: scan by service UUID, bond, state restoration, write flow control (code written; needs firmware to test)
+- [ ] `CLBackgroundActivitySession` + `location` / `bluetooth-central` modes (session code done; Info.plist modes need the Xcode app target)
+- [x] Decode `GNSS_QUALITY` and `COMPANION_STATUS` (layouts still proposed)
+- [ ] Single screen: session control, phone vs internal, acceptance feedback (`MainView` written; needs the app target)
 - [ ] Golden-vector tests shared with firmware
 
 **Exit:** all rows in [validation.md](validation.md) pass.
