@@ -1,6 +1,7 @@
 import CairnCore
 import CoreBluetooth
 import Foundation
+import os
 
 /// CoreBluetooth central for the Cairn dongle. Scans by service UUID, bonds by touching an
 /// encrypted characteristic, reconnects on its own (restoration alone is not assumed to), and
@@ -9,6 +10,7 @@ import Foundation
 public final class CairnBLEManager: NSObject {
     public enum SendResult: Sendable { case sent, notReady, backpressure }
 
+    private static let log = Logger(subsystem: "app.cairn.companion", category: "ble")
     private static let restoreID = "app.cairn.companion.central"
     private static let lastPeripheralKey = "cairn.lastPeripheralID"
     /// Matches the firmware's phone-GNSS staleness window.
@@ -22,6 +24,8 @@ public final class CairnBLEManager: NSObject {
     private var wantsConnection = false
     private var reconnectTask: Task<Void, Never>?
     private var streamingTask: Task<Void, Never>?
+    private var tracedWrites = 0
+    private static let sendDisabled = ProcessInfo.processInfo.environment["CAIRN_DISABLE_SEND"] != nil
 
     /// The link is bonded and the protocol version is accepted; fixes can be sent.
     public var onReady: (() -> Void)?
@@ -36,6 +40,11 @@ public final class CairnBLEManager: NSObject {
             delegate: self, queue: .main,
             options: [CBCentralManagerOptionRestoreIdentifierKey: Self.restoreID]
         )
+    }
+
+    private func trace(_ message: String) {
+        Self.log.notice("\(message, privacy: .public)")
+        print("[ble]", message) // visible with `devicectl ... --console`
     }
 
     // MARK: Control
@@ -61,6 +70,11 @@ public final class CairnBLEManager: NSObject {
         guard state.connection == .ready, let peripheral, let fixCharacteristic else { return .notReady }
         // Flow control says the radio can take it; only COMPANION_STATUS says the firmware did.
         guard peripheral.canSendWriteWithoutResponse else { return .backpressure }
+        if Self.sendDisabled { return .notReady } // diagnostics: CAIRN_DISABLE_SEND=1 in the launch environment
+        if tracedWrites < 8 {
+            tracedWrites += 1
+            trace("write seq \(payload.seq) \(payload.data.count) B age \(payload.sampleAgeMs) ms")
+        }
         peripheral.writeValue(payload.data, for: fixCharacteristic, type: .withoutResponse)
         return .sent
     }
@@ -116,6 +130,7 @@ public final class CairnBLEManager: NSObject {
     }
 
     private func linkLost() {
+        trace("linkLost, reconnect in \(Self.reconnectDelay)")
         streamingTask?.cancel()
         fixCharacteristic = nil
         state.resetDeviceState()
@@ -125,6 +140,7 @@ public final class CairnBLEManager: NSObject {
     }
 
     private func fail(_ message: String) {
+        trace("FAIL \(message)")
         state.connection = .failed(message)
         if let peripheral { central.cancelPeripheralConnection(peripheral) }
         streamingTask?.cancel()
@@ -140,6 +156,8 @@ public final class CairnBLEManager: NSObject {
             fail("BLE write size \(writable) B is below the 28 B GNSS_FIX")
             return
         }
+        tracedWrites = 0
+        trace("ready, maxWrite \(writable) B")
         state.connection = .ready
         onReady?()
         streamingTask?.cancel()
@@ -162,6 +180,7 @@ public final class CairnBLEManager: NSObject {
 
 extension CairnBLEManager: @preconcurrency CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        trace("central state \(central.state.rawValue)")
         if central.state == .poweredOn {
             connectIfPossible()
         } else if wantsConnection {
@@ -182,6 +201,7 @@ extension CairnBLEManager: @preconcurrency CBCentralManagerDelegate {
         _ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
         advertisementData: [String: Any], rssi RSSI: NSNumber
     ) {
+        trace("discovered \(peripheral.identifier) rssi \(RSSI) name \(peripheral.name ?? "-")")
         central.stopScan()
         adopt(peripheral)
         state.connection = .connecting
@@ -189,18 +209,21 @@ extension CairnBLEManager: @preconcurrency CBCentralManagerDelegate {
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        trace("didConnect \(peripheral.identifier)")
         UserDefaults.standard.set(peripheral.identifier.uuidString, forKey: Self.lastPeripheralKey)
         state.connection = .bonding
         peripheral.discoverServices([CairnGATTProfile.serviceUUID])
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        trace("didFailToConnect \(describe(error))")
         linkLost()
     }
 
     public func centralManager(
         _ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?
     ) {
+        trace("didDisconnect \(describe(error)) stage \(state.connection)")
         guard peripheral === self.peripheral else { return }
         linkLost()
     }
@@ -210,6 +233,7 @@ extension CairnBLEManager: @preconcurrency CBCentralManagerDelegate {
 
 extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        trace("services \(peripheral.services?.map { $0.uuid.uuidString } ?? []) \(describe(error))")
         guard error == nil,
               let service = peripheral.services?.first(where: { $0.uuid == CairnGATTProfile.serviceUUID })
         else { return fail("Cairn service not found") }
@@ -223,6 +247,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
     public func peripheral(
         _ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?
     ) {
+        trace("characteristics \(service.characteristics?.map { $0.uuid.uuidString } ?? []) \(describe(error))")
         guard error == nil, let characteristics = service.characteristics else {
             return fail("Characteristic discovery failed")
         }
@@ -243,6 +268,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
     public func peripheral(
         _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?
     ) {
+        trace("value \(characteristic.uuid.uuidString) \(characteristic.value?.count ?? -1) B \(describe(error))")
         if let error {
             // Bonding failures (wrong passkey, cancelled pairing) arrive here as ATT or CBError codes.
             if characteristic.uuid == CairnGATTProfile.protocolVersion {
@@ -268,4 +294,10 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
             break
         }
     }
+}
+
+private func describe(_ error: Error?) -> String {
+    guard let error else { return "ok" }
+    let e = error as NSError
+    return "\(e.domain)#\(e.code) \(e.localizedDescription)"
 }
