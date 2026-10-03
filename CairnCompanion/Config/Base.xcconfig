@@ -1,0 +1,6 @@
+// Committed defaults. Personal signing values live in Local.xcconfig (gitignored); copy
+// Local.xcconfig.example to Local.xcconfig and fill it in.
+CAIRN_BUNDLE_ID = app.cairn.companion
+CAIRN_TEAM_ID =
+
+#include? "Local.xcconfig"

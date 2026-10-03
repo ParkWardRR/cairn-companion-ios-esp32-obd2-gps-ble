@@ -23,6 +23,11 @@ public final class CairnBLEManager: NSObject {
     private var reconnectTask: Task<Void, Never>?
     private var streamingTask: Task<Void, Never>?
 
+    /// The link is bonded and the protocol version is accepted; fixes can be sent.
+    public var onReady: (() -> Void)?
+    /// The link dropped or failed. Reconnection keeps going on its own unless the link failed for good.
+    public var onLinkLost: (() -> Void)?
+
     /// Create at launch so state restoration can deliver its callback.
     public init(state: SessionState) {
         self.state = state
@@ -115,6 +120,7 @@ public final class CairnBLEManager: NSObject {
         fixCharacteristic = nil
         state.resetDeviceState()
         if wantsConnection { state.connection = .connecting }
+        onLinkLost?()
         scheduleReconnect()
     }
 
@@ -122,6 +128,7 @@ public final class CairnBLEManager: NSObject {
         state.connection = .failed(message)
         if let peripheral { central.cancelPeripheralConnection(peripheral) }
         streamingTask?.cancel()
+        onLinkLost?()
         // Stay failed: retrying would repeat the same refusal. A new Start clears it.
         wantsConnection = false
     }
@@ -134,6 +141,7 @@ public final class CairnBLEManager: NSObject {
             return
         }
         state.connection = .ready
+        onReady?()
         streamingTask?.cancel()
         streamingTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -165,9 +173,9 @@ extension CairnBLEManager: @preconcurrency CBCentralManagerDelegate {
     public func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         guard let restored = (dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral])?.first else { return }
         adopt(restored)
-        // The session was running when the system relaunched us; resume it.
+        // Only an armed app has a pending connection, so the system relaunched us for the dongle.
+        // `DrivingSession.resumeIfEnabled()` arms at launch; the link coming up starts the session.
         wantsConnection = true
-        state.isSessionActive = true
     }
 
     public func centralManager(

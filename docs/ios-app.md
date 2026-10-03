@@ -19,7 +19,7 @@ Use the live-updates API with a `LiveConfiguration`; do not mix it with `CLLocat
 
 One screen:
 
-- **Start / Stop** driving session (explicit user action)
+- **Auto-connect to Cairn** switch (on by default). The session follows the dongle: it starts when the link is bonded and stops when it drops. No Start button
 - Connection state: scanning → connecting → bonded → streaming
 - Phone location: accuracy (m), fix age, speed, validity
 - Device GNSS (from `GNSS_QUALITY`): fix type, sats used, HDOP
@@ -29,11 +29,17 @@ Not shown: satellite count or constellation. Core Location does not expose them.
 
 ## Background driving session
 
-A windshield mount does not keep the app foregrounded. Locking the screen or opening Maps is normal.
+A windshield mount does not keep the app foregrounded. Locking the screen or opening Maps is normal, and the app is usually launched by the car powering the dongle, not by the user.
 
-- Start taps create a `CLBackgroundActivitySession`; While In Use authorization is enough for an explicitly started session.
-- `CBCentralManager` uses `CBCentralManagerOptionRestoreIdentifierKey`. Restoration and relaunch depend on pending BLE operations and system conditions; the app does its own reconnect logic and does not assume the system will.
-- Stop ends location and BLE activity. A Live Activity or persistent indicator shows the session is running.
+- While auto-connect is on, the app holds a pending `connect` to the bonded dongle (or scans by service UUID before the first bond). It uses no location while waiting.
+- When the link is bonded and `PROTOCOL_VERSION` is accepted, `DrivingSession` creates a `CLBackgroundActivitySession` and starts `liveUpdates`. When the link drops, it ends both and goes back to waiting.
+- Starting location from a background BLE wake needs **Always** authorization; While In Use only covers a foregrounded start. The app requests Always. This must be validated on a device (BLE wake from suspended and from system-terminated, location starts, fixes accepted).
+- `CBCentralManager` uses `CBCentralManagerOptionRestoreIdentifierKey`. Restoration and relaunch depend on pending BLE operations and system conditions. A force-quit app is not relaunched by iOS. The app does its own reconnect logic and does not assume the system will.
+- The switch off ends location and BLE activity and clears the pending connect.
+
+## Pairing
+
+First pairing is manual and in the foreground: the first read of an encrypted characteristic makes iOS ask for the dongle's static 6-digit passkey. iOS then stores the bond and later reconnects are silent. The dongle holds one bond; a new phone replaces the old one. If the dongle's bond is reset (boot-time button or firmware command), remove "Cairn" under Settings > Bluetooth > (i) > Forget This Device on the phone, then pair again. The app cannot remove an iOS bond itself.
 
 ## Encoding rules (`PayloadEncoder`)
 

@@ -1,0 +1,4 @@
+// Copy to Config/Local.xcconfig (gitignored) and set your own values.
+// Bundle ID must be unique to your Apple Developer account.
+CAIRN_BUNDLE_ID = com.example.cairncompanion
+CAIRN_TEAM_ID = YOURTEAMID

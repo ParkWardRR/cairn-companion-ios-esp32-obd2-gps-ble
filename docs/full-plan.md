@@ -5,7 +5,7 @@ planStatus:
   status: draft
   planType: feature
   priority: high
-  owner: twesh
+  owner: ParkWardRR
   stakeholders: []
   tags:
     - ios

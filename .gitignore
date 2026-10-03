@@ -3,5 +3,6 @@
 xcuserdata/
 DerivedData/
 .build/
-*.xcodeproj/project.xcworkspace/
+**/*.xcodeproj/project.xcworkspace/
 secrets.h
+Local.xcconfig

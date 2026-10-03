@@ -2,13 +2,16 @@ import CairnCore
 import CoreLocation
 import Foundation
 
-/// One explicit driving session: keeps location and BLE alive with the screen locked, throttles
-/// to ~1 Hz, encodes, and hands fixes to the BLE manager. Start and Stop are user actions.
+/// Follows the Cairn dongle. While auto-connect is on, the app keeps a pending BLE connection to the
+/// paired dongle; location streaming starts when the link is bonded and stops when it drops. It keeps
+/// location and BLE alive with the screen locked, throttles to ~1 Hz, encodes, and hands fixes to the BLE manager.
 @MainActor
 public final class DrivingSession {
     public let state: SessionState
     private let ble: CairnBLEManager
     private let authorization = CLLocationManager()
+
+    private static let autoConnectKey = "cairn.autoConnectEnabled"
 
     #if os(iOS)
     private var backgroundSession: CLBackgroundActivitySession?
@@ -20,24 +23,49 @@ public final class DrivingSession {
     public init(state: SessionState, ble: CairnBLEManager) {
         self.state = state
         self.ble = ble
+        ble.onReady = { [weak self] in self?.beginDriving() }
+        ble.onLinkLost = { [weak self] in self?.endDriving() }
     }
 
-    public func start() {
-        guard !state.isSessionActive else { return }
-        state.resetAll()
-        state.isSessionActive = true
+    /// Call at launch, including background relaunches. Auto-connect is on unless the user turned it off.
+    public func resumeIfEnabled() {
+        let enabled = UserDefaults.standard.object(forKey: Self.autoConnectKey) as? Bool ?? true
+        if enabled { arm() }
+    }
 
-        // While In Use is enough for an explicitly started session with a background activity session.
-        if authorization.authorizationStatus == .notDetermined {
-            authorization.requestWhenInUseAuthorization()
+    /// Start waiting for the dongle. Location is not used until the link is up.
+    public func arm() {
+        guard !state.isArmed else { return }
+        UserDefaults.standard.set(true, forKey: Self.autoConnectKey)
+        state.resetAll()
+        state.isArmed = true
+        seq = 0
+
+        // A link that comes up while the app is in the background has to start location there, which
+        // needs Always authorization. While In Use is enough only when the app is foregrounded.
+        switch authorization.authorizationStatus {
+        case .notDetermined, .authorizedWhenInUse: authorization.requestAlwaysAuthorization()
+        default: break
         }
+        ble.start()
+    }
+
+    /// Stop following the dongle and release BLE and location.
+    public func disarm() {
+        UserDefaults.standard.set(false, forKey: Self.autoConnectKey)
+        endDriving()
+        ble.stop()
+        state.resetAll()
+        state.isArmed = false
+    }
+
+    private func beginDriving() {
+        guard state.isArmed, !state.isDriving else { return }
+        state.isDriving = true
+        throttle.reset()
         #if os(iOS)
         backgroundSession = CLBackgroundActivitySession()
         #endif
-        throttle.reset()
-        seq = 0
-
-        ble.start()
         locationTask = Task { [weak self] in
             for await event in LocationStream.events() {
                 self?.handle(event)
@@ -45,16 +73,17 @@ public final class DrivingSession {
         }
     }
 
-    public func stop() {
+    private func endDriving() {
+        guard state.isDriving else { return }
         locationTask?.cancel()
         locationTask = nil
         #if os(iOS)
         backgroundSession?.invalidate()
         backgroundSession = nil
         #endif
-        ble.stop()
-        state.resetAll()
-        state.isSessionActive = false
+        state.isDriving = false
+        state.phoneFix = nil
+        state.locationMessage = nil
     }
 
     private func handle(_ event: LocationEvent) {

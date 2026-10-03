@@ -16,7 +16,10 @@ public final class SessionState {
         case failed(String)
     }
 
-    public var isSessionActive = false
+    /// Auto-connect is on: the app is waiting for, or connected to, the Cairn dongle.
+    public var isArmed = false
+    /// The dongle link is up and location is streaming to it. Starts and stops with the link.
+    public var isDriving = false
     public var connection: Connection = .idle
     /// True only while the device recently acknowledged acceptance via `COMPANION_STATUS`,
     /// not merely because the phone called `write`.
@@ -38,9 +41,9 @@ public final class SessionState {
 
     public var stage: String {
         switch connection {
-        case .idle: "Stopped"
+        case .idle: "Off"
         case .bluetoothUnavailable(let why): why
-        case .scanning: "Scanning"
+        case .scanning: "Waiting for Cairn"
         case .connecting: "Connecting"
         case .bonding: "Bonding"
         case .ready: isStreaming ? "Streaming" : "Bonded"

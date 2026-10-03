@@ -1,0 +1,353 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		010AB516EFBEAE671DE70836 /* CairnCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */; };
+		49C8AA998882F97D98D9C1A2 /* CairnRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 8194D8111923C50345AEDD47 /* CairnRuntime */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2C915BBCB042E798AC2B2C03 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		490683BC313B464740E9D585 /* CairnCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CairnCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		56A8902795E41E4DCED67606 /* CairnCompanion */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CairnCompanion; path = .; sourceTree = SOURCE_ROOT; };
+		5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CairnCompanionApp.swift; sourceTree = "<group>"; };
+		CB371EDA615C2376801123BF /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BC9697D0C0F71EAB8DAEA343 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				49C8AA998882F97D98D9C1A2 /* CairnRuntime in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		54A098654180CBF985B65AE0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */,
+				2C915BBCB042E798AC2B2C03 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		57DE4993D5F5FEEE7542DB0D = {
+			isa = PBXGroup;
+			children = (
+				54A098654180CBF985B65AE0 /* App */,
+				7CCB027E2D1DFAE833922A98 /* Config */,
+				5C6ED93CCB209F004DCA6C22 /* Packages */,
+				682872F88BB8D63C69CAD872 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5C6ED93CCB209F004DCA6C22 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				56A8902795E41E4DCED67606 /* CairnCompanion */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		682872F88BB8D63C69CAD872 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				490683BC313B464740E9D585 /* CairnCompanion.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7CCB027E2D1DFAE833922A98 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				CB371EDA615C2376801123BF /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4882229F6E7D851E1BE9735E /* CairnCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5D11F6EA4891066E20D16DA6 /* Build configuration list for PBXNativeTarget "CairnCompanion" */;
+			buildPhases = (
+				82EDADB6258A4ED7289D6AD4 /* Sources */,
+				BC9697D0C0F71EAB8DAEA343 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CairnCompanion;
+			packageProductDependencies = (
+				8194D8111923C50345AEDD47 /* CairnRuntime */,
+			);
+			productName = CairnCompanion;
+			productReference = 490683BC313B464740E9D585 /* CairnCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A47AB0997B88E23C74572E8E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					4882229F6E7D851E1BE9735E = {
+						DevelopmentTeam = "$(CAIRN_TEAM_ID)";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = D25CCF4209728EF8AFA99928 /* Build configuration list for PBXProject "CairnCompanion" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 57DE4993D5F5FEEE7542DB0D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DBF0284141E63BE3288B87B9 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 682872F88BB8D63C69CAD872 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4882229F6E7D851E1BE9735E /* CairnCompanion */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		82EDADB6258A4ED7289D6AD4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010AB516EFBEAE671DE70836 /* CairnCompanionApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		372C4F72CAAB4E665F30BFAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CB371EDA615C2376801123BF /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "$(CAIRN_TEAM_ID)";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		73376F7CFC8C501BA9C65AEF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CAIRN_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		895FBE334AD28E1305AE3515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CAIRN_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		FC50C66FA59A53EABFF41495 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CB371EDA615C2376801123BF /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "$(CAIRN_TEAM_ID)";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5D11F6EA4891066E20D16DA6 /* Build configuration list for PBXNativeTarget "CairnCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73376F7CFC8C501BA9C65AEF /* Debug */,
+				895FBE334AD28E1305AE3515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D25CCF4209728EF8AFA99928 /* Build configuration list for PBXProject "CairnCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FC50C66FA59A53EABFF41495 /* Debug */,
+				372C4F72CAAB4E665F30BFAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		DBF0284141E63BE3288B87B9 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8194D8111923C50345AEDD47 /* CairnRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CairnRuntime;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A47AB0997B88E23C74572E8E /* Project object */;
+}

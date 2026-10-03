@@ -1,0 +1,37 @@
+name: CairnCompanion
+options:
+  bundleIdPrefix: app.cairn
+  deploymentTarget:
+    iOS: "17.0"
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+packages:
+  CairnCompanionKit:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: $(CAIRN_TEAM_ID)
+    CODE_SIGN_STYLE: Automatic
+targets:
+  CairnCompanion:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: CairnCompanionKit
+        product: CairnRuntime
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(CAIRN_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Cairn Companion streams your phone's location to your Cairn device during a driving session.
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.
+    info:
+      path: App/Info.plist
+      properties:
+        UIBackgroundModes: [location, bluetooth-central]

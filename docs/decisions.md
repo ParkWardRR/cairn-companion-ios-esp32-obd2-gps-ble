@@ -13,6 +13,7 @@
 | 7 | Locked-screen driving session in Phase 1 | Foreground-only MVP | A mounted phone is routinely locked or running Maps; foreground-only would not be a dependable driving companion |
 | 8 | `DEGRADED_GNSS` = internal receiver health | Clear when any source has a fix | Otherwise the phone masks an internal hardware fault |
 | 9 | Swift + SwiftUI + Observation + async/await | Combine, UIKit | Preferred stack; iOS 17 minimum |
+| 10 | Session follows the BLE link (auto-connect, no Start button) | Explicit Start / Stop | The dongle powering on is the signal; nobody taps a phone while driving. Cost: needs Always location authorization and on-device validation of background wake. Supersedes the explicit-start part of #7 |
 
 ## Design review: what changed
 

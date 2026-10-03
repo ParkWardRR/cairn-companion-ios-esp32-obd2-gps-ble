@@ -1,7 +1,7 @@
 import CairnCore
 import SwiftUI
 
-/// The single Phase 1 screen: session control, phone vs internal receiver, acceptance feedback.
+/// The single Phase 1 screen: auto-connect switch, phone vs internal receiver, acceptance feedback.
 public struct MainView: View {
     private let session: DrivingSession
     private let state: SessionState
@@ -14,10 +14,10 @@ public struct MainView: View {
     public var body: some View {
         List {
             Section {
-                Button(state.isSessionActive ? "Stop driving session" : "Start driving session") {
-                    state.isSessionActive ? session.stop() : session.start()
-                }
-                .tint(state.isSessionActive ? .red : .accentColor)
+                Toggle("Auto-connect to Cairn", isOn: Binding(
+                    get: { state.isArmed },
+                    set: { $0 ? session.arm() : session.disarm() }
+                ))
                 LabeledContent("Connection", value: state.stage)
                 if let message = state.locationMessage {
                     Text(message).foregroundStyle(.orange)
