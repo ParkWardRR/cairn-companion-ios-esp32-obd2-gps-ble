@@ -64,7 +64,7 @@ CairnCompanion/
 │   ├── Location/   LocationStream (liveUpdates), BaroStream (Phase 2)
 │   ├── Session/    DrivingSession (background session lifecycle), SessionState (@Observable)
 │   ├── Models/     PhoneGNSSFix (validity, staleness, fix_type), DeviceGNSSStatus
-│   └── Views/      MainView, GPSComparisonView
+│   └── Views/      MainView (status + metric cards), CairnMark (logo)
 └── Tests/          PayloadTests, ValidityTests, StalenessTests
 ```
 

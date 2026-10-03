@@ -27,7 +27,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: $(CAIRN_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Cairn
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_BackgroundColor: LaunchBackground
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Cairn Companion connects to your Cairn device over Bluetooth to send it phone GPS fixes.
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Cairn Companion streams your phone's location to your Cairn device during a driving session.
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.
