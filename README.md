@@ -1,3 +1,5 @@
+<img src="docs/images/app-icon.png" width="112" alt="Cairn Companion app icon">
+
 # Cairn Companion
 
 **Your iPhone's GPS, streamed to an in-car ESP32 OBD-II logger over Bluetooth LE.**
