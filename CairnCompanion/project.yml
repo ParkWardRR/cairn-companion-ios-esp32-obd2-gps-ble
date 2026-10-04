@@ -2,7 +2,7 @@ name: CairnCompanion
 options:
   bundleIdPrefix: app.cairn
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "18.0"
 configFiles:
   Debug: Config/Base.xcconfig
   Release: Config/Base.xcconfig
@@ -40,3 +40,5 @@ targets:
       path: App/Info.plist
       properties:
         UIBackgroundModes: [location, bluetooth-central]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true

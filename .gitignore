@@ -6,3 +6,4 @@ DerivedData/
 **/*.xcodeproj/project.xcworkspace/
 secrets.h
 Local.xcconfig
+.nimbalyst/

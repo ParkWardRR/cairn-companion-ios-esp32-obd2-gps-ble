@@ -95,3 +95,50 @@ Nothing has run against real firmware or a device yet. Treat the first end-to-en
 - Protocol changes update both repos. Change `docs/ble-protocol.md` here and its mirror there in the same pass, and tell the iOS side what moved.
 - Check roadmap rows only where confirmed on hardware, as the roadmap states.
 - Firmware validation rows (stack high-water mark, heap, IMU deadlines, BLE + SD, BLE + WiFi, standby) are in `docs/validation.md` under **Resources and coexistence** and are yours.
+
+---
+
+## Firmware response (2026-10-03)
+
+### Completed this pass
+
+| Row | Status | Commit |
+|---|---|---|
+| GATT server, 4 characteristics, authenticated pairing | Shipped, confirmed on hardware | `997bcd4` |
+| Radio handover (BLE stops before WiFi sync / standby, resumes after) | Shipped, confirmed on hardware | `0f2bc3e` |
+| Golden vectors in C test suite | **Done.** 6/6 pass. `test/host/ble_vectors.c` decodes each `gnss_fix[].hex`, checks all fields including sentinels, clamping, course wrap, and validation rules | this pass |
+| Phone state cleared on BLE disconnect | **Done.** `lifecycle_tick` detects `!ble_companion_connected()` and immediately clears `phone_gnss_active`, `last_gnss_phone`, reverts `last_gnss` to internal | this pass |
+| Bond reset mechanism | **Done.** `ble_companion_clear_bonds()` exported. `CONFIG_BT_NIMBLE_MAX_BONDS=1` already in build flags | this pass |
+| NimBLE pin | Already pinned: `h2zero/NimBLE-Arduino@^2.2.1` in `platformio.ini` | `997bcd4` |
+| Storage safety (DuckDB) | **Done.** ASOF joins in `v_telemetry`, `v_speed_agreement` now filter to internal-only (`source_flags & 32 = 0`). New `v_gnss_sources` view for offline source comparison. `v_drive_summary` separates `gnss_samples` (internal) from `phone_samples`. PostgreSQL key is `(observed_at, content_root, seq)` — no collision | this pass |
+| Docs: `bundle-format-v2.md` | **Done.** `source_flags` b5 = "external source (phone)" | this pass |
+| Docs: `ble-companion-protocol.md` | **Done.** Copied from iOS repo to `docs/ble-companion-protocol.md` | this pass |
+
+### Frozen layouts
+
+**GNSS_QUALITY** and **COMPANION_STATUS** are shipped as specified. Freeze them.
+
+- `GNSS_QUALITY` (8 B): `fix_type` u8, `sats_used` u8, `hdop_e2` u16, `fix_age_ms` u32. `hdop_e2 = 0xFFFF` means unknown.
+- `COMPANION_STATUS` (8 B): `last_accepted_seq` u16, `accepted_count` u16, `rejected_count` u16, `queue_drop_count` u16. Counters reset per connection.
+
+### Notes for the iOS side
+
+1. **Sparse fixes while parked are fine.** iOS's `.automotiveNavigation` delivers ~6 s updates when stationary; the firmware's 3 s staleness threshold rejects those. This is correct — the dongle doesn't need phone GPS while parked. During a drive iOS delivers at full rate. No app-side heartbeat or re-send needed.
+
+2. **Post-trip BLE disconnect is intentional.** After engine off, the dongle disconnects BLE, syncs over WiFi, then re-advertises. Typical gap is 30–60 s (WiFi timeout) or instant (no bundles pending). The app's reconnect-on-advertise behavior is exactly right.
+
+3. **Bond survives reboot.** Confirmed on hardware: the phone reconnects with encryption automatically after a power cycle, no re-pairing prompt.
+
+4. **`seq` wrap and reconnect.** The firmware resets `s_have_seq` on every new connection, so a fresh `seq=0` after reconnect is accepted.
+
+5. **Course wrap at 360.** The golden vectors confirm: `round(359.9999 * 100) = 36000`, which wraps to `0` via `% 36000`. The C decoder agrees.
+
+6. **`ble_companion_clear_bonds()` is available** but there is no hardware button on the Freematics ONE+ to trigger it at boot. Currently requires a firmware call (e.g. via a serial command or NVS flag). If the user needs to re-pair with a different phone, they delete the bond on the phone side ("Forget This Device") and the firmware's single-bond slot is replaced on the next pairing.
+
+### Not yet done
+
+| Row | Status |
+|---|---|
+| Phase 2: `BARO_ALT` (`0002`) and `UTC_SYNC` (`0003`) | Not started. The app can discover safely — they won't be there yet |
+| Resource validation (stack HWM, heap, IMU deadlines under BLE+SD+WiFi) | Needs a drive with serial logging |
+| Drive test (phone vs internal accuracy, write rate, battery) | Needs a drive |

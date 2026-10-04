@@ -108,6 +108,7 @@ private struct HistoryRow: View {
                 Text(entry.startedAt, style: .date)
                     .font(.headline)
                 Spacer()
+                sourceIcon(entry)
                 if let session = entry.phoneSession {
                     lifecycleBadge(session)
                 }
@@ -130,6 +131,10 @@ private struct HistoryRow: View {
                             .font(.caption)
                             .foregroundStyle(.orange)
                     }
+                } else if let trip = entry.serverTrip {
+                    Label(formatDuration(trip.durationSeconds), systemImage: "timer")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             if let sync = entry.syncLabel {
@@ -139,13 +144,15 @@ private struct HistoryRow: View {
             }
             if let trip = entry.serverTrip {
                 HStack(spacing: 8) {
-                    if let dist = trip.distanceMeters {
-                        Label(formatDistance(dist), systemImage: "road.lanes")
+                    if let speed = trip.maxSpeedKph {
+                        Label("\(speed) km/h", systemImage: "speedometer")
                             .font(.caption)
                     }
-                    Label("\(trip.phoneSamples) phone", systemImage: "iphone")
-                        .font(.caption)
-                    Label("\(trip.internalSamples) internal", systemImage: "antenna.radiowaves.left.and.right")
+                    if trip.obdSamples > 0 {
+                        Label("\(trip.obdSamples) OBD", systemImage: "engine.combustion")
+                            .font(.caption)
+                    }
+                    Label("\(trip.gnssSamples) GPS", systemImage: "antenna.radiowaves.left.and.right")
                         .font(.caption)
                 }
                 .foregroundStyle(.secondary)
@@ -168,6 +175,23 @@ private struct HistoryRow: View {
             if session.quality == .bench {
                 badgePill("BENCH", color: .secondary)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceIcon(_ entry: HistoryEntry) -> some View {
+        if entry.isMatched {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else if entry.isOnServerOnly {
+            Image(systemName: "cloud.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if entry.isOnPhoneOnly {
+            Image(systemName: "iphone")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -243,12 +267,13 @@ private struct DriveDetailView: View {
         GroupBox("Server Trip") {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 tile("Duration", formatDuration(trip.durationSeconds))
-                if let dist = trip.distanceMeters { tile("Distance", formatDistance(dist)) }
-                tile("Internal samples", "\(trip.internalSamples)")
+                if let speed = trip.maxSpeedKph { tile("Max speed", "\(speed) km/h") }
+                if let rpm = trip.maxRpm { tile("Max RPM", "\(rpm)") }
+                tile("OBD samples", "\(trip.obdSamples)")
+                tile("GNSS samples", "\(trip.gnssSamples)")
+                tile("Fix samples", "\(trip.fixSamples)")
                 tile("Phone samples", "\(trip.phoneSamples)")
-                tile("GNSS gaps", formatDuration(trip.gnssGapSeconds))
-                tile("Bundles", "\(trip.bundleCount)")
-                if trip.bundlesPending > 0 { tile("Pending", "\(trip.bundlesPending)") }
+                tile("GNSS gaps", "\(trip.gapCount) (\(formatDuration(trip.gnssGapSeconds)))")
             }
             .padding(.top, 4)
         }
