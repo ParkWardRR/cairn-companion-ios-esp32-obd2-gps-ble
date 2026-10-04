@@ -17,6 +17,10 @@ public enum CairnGATTProfile {
     public static var baroAlt: CBUUID { uuid(suffix: "0002") }
     public static var utcSync: CBUUID { uuid(suffix: "0003") }
 
+    /// Phase 2 notifies. Optional: present only when the dongle has OBD and device health.
+    public static var obdLive: CBUUID { uuid(suffix: "0020") }
+    public static var deviceStatus: CBUUID { uuid(suffix: "0021") }
+
     /// Minimum `maximumWriteValueLength(for: .withoutResponse)` needed to send a `GNSS_FIX`.
     public static var requiredWriteLength: Int { GNSSFixPayload.size }
 

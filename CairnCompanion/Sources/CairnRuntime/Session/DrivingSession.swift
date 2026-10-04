@@ -9,6 +9,7 @@ import Foundation
 public final class DrivingSession {
     public let state: SessionState
     private let ble: CairnBLEManager
+    public let recorder: DriveRecorder
     private let authorization = CLLocationManager()
 
     private static let autoConnectKey = "cairn.autoConnectEnabled"
@@ -19,20 +20,32 @@ public final class DrivingSession {
     private var locationTask: Task<Void, Never>?
     private var utcTask: Task<Void, Never>?
     private var baroTask: Task<Void, Never>?
+    private var summaryTask: Task<Void, Never>?
+    private var drivingStartedAt: Date?
+    private var loggedFirstFix = false
+    private static let summaryInterval: Duration = .seconds(30)
     private static let utcSyncInterval: Duration = .seconds(60)
     private var throttle = TransmitThrottle()
     private var seq: UInt16 = 0
 
-    public init(state: SessionState, ble: CairnBLEManager) {
+    public init(state: SessionState, ble: CairnBLEManager, recorder: DriveRecorder) {
         self.state = state
         self.ble = ble
+        self.recorder = recorder
         ble.onReady = { [weak self] in self?.beginDriving() }
         ble.onLinkLost = { [weak self] in self?.endDriving() }
+        ble.onStatus = { [weak self] status in self?.recorder.recordStatus(status) }
+        ble.onStreamingChanged = { [weak self] streaming in self?.recorder.recordStreamingChange(isStreaming: streaming) }
+        ble.onOBDReceived = { [weak self] in self?.recorder.noteOBDReceived() }
+        ble.onDeviceStatus = { [weak self] status in
+            if status.tripPhase == .driving { self?.recorder.noteDeviceDriving() }
+        }
     }
 
     /// Call at launch, including background relaunches. Auto-connect is on unless the user turned it off.
     public func resumeIfEnabled() {
         let enabled = UserDefaults.standard.object(forKey: Self.autoConnectKey) as? Bool ?? true
+        log("launch autoConnect \(enabled) location \(Self.describe(authorization.authorizationStatus))")
         if enabled { arm() }
     }
 
@@ -42,8 +55,11 @@ public final class DrivingSession {
         UserDefaults.standard.set(true, forKey: Self.autoConnectKey)
         state.resetAll()
         state.isArmed = true
+        state.record(.armed)
         seq = 0
+        recorder.reconcileOnLaunch(bleRestored: false)
 
+        log("arm location \(Self.describe(authorization.authorizationStatus))")
         // A link that comes up while the app is in the background has to start location there, which
         // needs Always authorization. While In Use is enough only when the app is foregrounded.
         switch authorization.authorizationStatus {
@@ -53,10 +69,18 @@ public final class DrivingSession {
         ble.start()
     }
 
+    /// Clear the stored dongle and guide the user to remove the bond in iOS Settings.
+    public func forgetDongle() {
+        disarm()
+        ble.forgetDongle()
+    }
+
     /// Stop following the dongle and release BLE and location.
     public func disarm() {
+        log("disarm")
         UserDefaults.standard.set(false, forKey: Self.autoConnectKey)
         endDriving()
+        recorder.disarmed()
         ble.stop()
         state.resetAll()
         state.isArmed = false
@@ -65,10 +89,14 @@ public final class DrivingSession {
     private func beginDriving() {
         guard state.isArmed, !state.isDriving else { return }
         state.isDriving = true
-        // The dongle's COMPANION_STATUS counters restart on every connection, so ours do too.
+        drivingStartedAt = Date()
+        loggedFirstFix = false
+        log("driving begin location \(Self.describe(authorization.authorizationStatus))")
         state.sentCount = 0
         state.droppedCount = 0
         throttle.reset()
+        recorder.linkReady(deviceID: nil)
+        recorder.newCounterEpoch()
         #if os(iOS)
         backgroundSession = CLBackgroundActivitySession()
         #endif
@@ -78,6 +106,13 @@ public final class DrivingSession {
             }
         }
         startEnrichment()
+        summaryTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.summaryInterval)
+                self?.logSummary()
+                self?.recorder.checkpoint()
+            }
+        }
     }
 
     /// Phase 2 writes, sent only if the dongle exposes the characteristic.
@@ -101,8 +136,12 @@ public final class DrivingSession {
 
     private func endDriving() {
         guard state.isDriving else { return }
+        recorder.linkLost(reason: nil)
         locationTask?.cancel()
         locationTask = nil
+        summaryTask?.cancel()
+        summaryTask = nil
+        logSummary(prefix: "driving end")
         utcTask?.cancel()
         utcTask = nil
         baroTask?.cancel()
@@ -119,11 +158,44 @@ public final class DrivingSession {
     private func handle(_ event: LocationEvent) {
         switch event {
         case .unavailable(let message):
+            if state.locationMessage != message { log("location unavailable: \(message)") }
             state.locationMessage = message
         case .fix(let fix):
+            if !loggedFirstFix {
+                loggedFirstFix = true
+                let wait = drivingStartedAt.map { String(format: "%.1f", Date().timeIntervalSince($0)) } ?? "?"
+                log("first fix \(wait) s after link ready, hAcc \(fix.horizontalAccuracy) m")
+            }
             state.locationMessage = nil
             state.phoneFix = fix
+            recorder.recordFix(fix)
             transmit(fix)
+        }
+    }
+
+    /// Persisted event for post-drive review (Files app > Cairn > cairn-drive.log).
+    public func log(_ message: String) {
+        DriveLog.shared.record("app \(message)")
+    }
+
+    private func logSummary(prefix: String = "summary") {
+        let device = state.companionStatus.map {
+            "device accepted \($0.acceptedCount) rejected \($0.rejectedCount) queueDrop \($0.queueDropCount)"
+        } ?? "device status none"
+        let fix = state.phoneFix.map {
+            String(format: "last hAcc %.0f m age %.1f s", $0.horizontalAccuracy, Date().timeIntervalSince($0.timestamp))
+        } ?? "no fix"
+        log("\(prefix) sent \(state.sentCount) dropped \(state.droppedCount) \(device) streaming \(state.isStreaming) \(fix)")
+    }
+
+    private static func describe(_ status: CLAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: "notDetermined"
+        case .restricted: "restricted"
+        case .denied: "denied"
+        case .authorizedAlways: "always"
+        case .authorizedWhenInUse: "whenInUse"
+        @unknown default: "unknown"
         }
     }
 
@@ -138,8 +210,11 @@ public final class DrivingSession {
             seq &+= 1
             state.sentCount += 1
             state.lastSent = payload
+            state.lastWriteAt = Date()
+            recorder.recordSend()
         case .backpressure:
             state.droppedCount += 1
+            recorder.recordWriteFailure()
         case .notReady:
             break // not connected yet; fixes are not queued
         }

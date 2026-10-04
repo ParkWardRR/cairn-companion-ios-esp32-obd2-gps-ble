@@ -140,6 +140,102 @@ private func fix(
     }
 }
 
+@Suite struct OBDLiveTests {
+    private func makeOBDData(
+        rpm: UInt16 = 3500, speedE1: UInt16 = 650, throttle: UInt8 = 42, load: UInt8 = 55,
+        coolant: Int16 = 90, intake: Int16 = 35, boostE1: Int16 = 85,
+        mafE2: UInt16 = 1250, fuelPressure: UInt16 = 350, timingE2: Int16 = 1400,
+        stft1: Int16 = 250, ltft1: Int16 = -125, stft2: Int16 = 0x7FFF, ltft2: Int16 = 0x7FFF,
+        oilTemp: Int16 = 105, voltageMv: UInt16 = 14200, bitmap: UInt16 = 0xFFFF, ageMs: UInt32 = 50
+    ) -> Data {
+        var d = Data(capacity: 48)
+        d.appendLE(rpm); d.appendLE(speedE1)
+        d.append(throttle); d.append(load)
+        d.appendLE(coolant); d.appendLE(intake)
+        d.appendLE(boostE1); d.appendLE(mafE2)
+        d.appendLE(fuelPressure); d.appendLE(timingE2)
+        d.appendLE(stft1); d.appendLE(ltft1)
+        d.appendLE(stft2); d.appendLE(ltft2)
+        d.appendLE(oilTemp); d.appendLE(voltageMv)
+        d.appendLE(bitmap); d.appendLE(ageMs)
+        d.append(contentsOf: [UInt8](repeating: 0, count: 12))
+        return d
+    }
+
+    @Test func decodesValidSnapshot() throws {
+        let obd = try #require(PayloadDecoder.obdLive(makeOBDData()))
+        #expect(obd.rpm == 3500)
+        #expect(obd.speedKph == 65.0)
+        #expect(obd.throttlePct == 42)
+        #expect(obd.coolantTempC == 90)
+        #expect(obd.boostKpa == 8.5)
+        #expect(obd.stft1 == 2.5)
+        #expect(obd.ltft1 == -1.25)
+        #expect(obd.voltage == 14.2)
+        #expect(obd.hasRPM)
+        #expect(obd.hasCoolant)
+    }
+
+    @Test func sentinelsReturnNil() throws {
+        let obd = try #require(PayloadDecoder.obdLive(makeOBDData(
+            rpm: 0xFFFF, speedE1: 0xFFFF, throttle: 0xFF,
+            coolant: 0x7FFF, boostE1: 0x7FFF, voltageMv: 0xFFFF
+        )))
+        #expect(!obd.hasRPM)
+        #expect(obd.speedKph == nil)
+        #expect(!obd.hasThrottle)
+        #expect(!obd.hasCoolant)
+        #expect(!obd.hasBoost)
+        #expect(obd.voltage == nil)
+    }
+
+    @Test func rejectsWrongLength() {
+        #expect(PayloadDecoder.obdLive(Data(count: 47)) == nil)
+        #expect(PayloadDecoder.obdLive(Data(count: 49)) == nil)
+    }
+}
+
+@Suite struct DeviceStatusTests {
+    private func makeStatusData(
+        trip: UInt8 = 1, flags: UInt8 = 0, health: UInt16 = 0x000F,
+        battery: UInt16 = 12600, sdFree: UInt16 = 2048, uptime: UInt32 = 3661
+    ) -> Data {
+        var d = Data(capacity: 12)
+        d.append(trip); d.append(flags)
+        d.appendLE(health); d.appendLE(battery)
+        d.appendLE(sdFree); d.appendLE(uptime)
+        return d
+    }
+
+    @Test func decodesValidStatus() throws {
+        let ds = try #require(PayloadDecoder.deviceStatus(makeStatusData()))
+        #expect(ds.tripPhase == .driving)
+        #expect(ds.batteryV == 12.6)
+        #expect(ds.sdFree == 2048)
+        #expect(ds.uptimeS == 3661)
+        #expect(ds.health.contains(.obdOk))
+        #expect(ds.health.contains(.gnssOk))
+        #expect(ds.health.contains(.sdOk))
+        #expect(ds.health.contains(.imuOk))
+    }
+
+    @Test func unknownTripStateBecomesUnknown() throws {
+        let ds = try #require(PayloadDecoder.deviceStatus(makeStatusData(trip: 99)))
+        #expect(ds.tripPhase == .unknown)
+    }
+
+    @Test func sentinelsReturnNil() throws {
+        let ds = try #require(PayloadDecoder.deviceStatus(makeStatusData(battery: 0xFFFF, sdFree: 0xFFFF)))
+        #expect(ds.batteryV == nil)
+        #expect(ds.sdFree == nil)
+    }
+
+    @Test func rejectsWrongLength() {
+        #expect(PayloadDecoder.deviceStatus(Data(count: 11)) == nil)
+        #expect(PayloadDecoder.deviceStatus(Data(count: 13)) == nil)
+    }
+}
+
 @Suite struct StalenessTests {
     @Test func dropsFixesOlderThanTwoSeconds() {
         #expect(PayloadEncoder.encode(fix(age: 2.01), now: now, seq: 1) == nil)

@@ -77,6 +77,41 @@ Relative barometric altitude, not MSL and not the GNSS ellipsoid. The dongle sho
 
 The app sends both only when the dongle exposes the characteristic, using write-without-response when offered, otherwise a confirmed write.
 
+## `OBD_LIVE` (48 bytes, Phase 2, device → phone)
+
+| Off | Size | Field | Type | Units / sentinel |
+|---:|---:|---|---|---|
+| 0 | 2 | `rpm` | u16 | RPM; `0xFFFF` = unavailable |
+| 2 | 2 | `speed_kph_e1` | u16 | km/h × 10; `0xFFFF` = unavailable |
+| 4 | 1 | `throttle_pct` | u8 | 0–100; `0xFF` = unavailable |
+| 5 | 1 | `engine_load_pct` | u8 | 0–100; `0xFF` = unavailable |
+| 6 | 2 | `coolant_temp_c` | i16 | °C; `0x7FFF` = unavailable |
+| 8 | 2 | `intake_temp_c` | i16 | °C; `0x7FFF` = unavailable |
+| 10 | 2 | `boost_kpa_e1` | i16 | kPa × 10 (signed, negative = vacuum); `0x7FFF` = unavailable |
+| 12 | 2 | `maf_e2` | u16 | g/s × 100; `0xFFFF` = unavailable |
+| 14 | 2 | `fuel_pressure_kpa` | u16 | kPa; `0xFFFF` = unavailable |
+| 16 | 2 | `timing_adv_e2` | i16 | degrees × 100; `0x7FFF` = unavailable |
+| 18 | 2 | `stft1_e2` | i16 | short-term fuel trim bank 1, % × 100; `0x7FFF` = unavailable |
+| 20 | 2 | `ltft1_e2` | i16 | long-term fuel trim bank 1, % × 100; `0x7FFF` = unavailable |
+| 22 | 2 | `stft2_e2` | i16 | short-term fuel trim bank 2, % × 100; `0x7FFF` = unavailable |
+| 24 | 2 | `ltft2_e2` | i16 | long-term fuel trim bank 2, % × 100; `0x7FFF` = unavailable |
+| 26 | 2 | `oil_temp_c` | i16 | °C; `0x7FFF` = unavailable |
+| 28 | 2 | `voltage_mv` | u16 | system voltage in mV; `0xFFFF` = unavailable |
+| 30 | 2 | `pid_bitmap` | u16 | which PIDs have valid data |
+| 32 | 4 | `age_ms` | u32 | age of this OBD reading in ms |
+| 36 | 12 | `reserved` | — | 0 |
+
+## `DEVICE_STATUS` (12 bytes, Phase 2, device → phone)
+
+| Off | Size | Field | Type | Units / sentinel |
+|---:|---:|---|---|---|
+| 0 | 1 | `trip_state` | u8 | 0 idle, 1 driving, 2 paused |
+| 1 | 1 | `flags` | u8 | reserved |
+| 2 | 2 | `health_bitmap` | u16 | b0 OBD ok, b1 GNSS ok, b2 SD ok, b3 IMU ok |
+| 4 | 2 | `battery_mv` | u16 | device battery/system voltage in mV; `0xFFFF` = unknown |
+| 6 | 2 | `sd_free_mb` | u16 | SD card free space in MB; `0xFFFF` = unknown |
+| 8 | 4 | `uptime_s` | u32 | seconds since last boot |
+
 ## Staleness and timing
 
 | Rule | Where | Value |
