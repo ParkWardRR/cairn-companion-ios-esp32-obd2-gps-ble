@@ -7,3 +7,4 @@ DerivedData/
 secrets.h
 Local.xcconfig
 .nimbalyst/
+nimbalyst-local/
