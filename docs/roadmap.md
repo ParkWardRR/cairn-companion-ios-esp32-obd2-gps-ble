@@ -79,3 +79,22 @@ The app side started early. Nothing here has run against a real server yet.
 - [ ] Retention limit and export
 - [ ] Internal-vs-phone analysis, matched by measurement time
 - [ ] Decide on powering down internal GNSS when the phone is connected
+
+## v3 — Authenticated sync and multi-vehicle
+
+Cairn v3 replaces the unauthenticated snapshot download with an enrolled-client model. The phone gets a Secure Enclave P-256 identity, signs every request, and syncs through a durable outbox. Data is scoped by vehicle. The protocol spec and test vectors live in the Cairn repo at `docs/app-sync-protocol.md` (not yet published).
+
+Suggested order: #12 → #1 → #2 → #3 + #4 → #5 → #6 → #7 → #10 → #8 → #11; #9 when firmware Phase 22 freezes.
+
+- [ ] #12 Golden vectors, CI and docs
+- [ ] #1 Secure Enclave identity and enrolment
+- [ ] #2 CairnServerClient: per-request signing and bearer tokens
+- [ ] #3 Vehicle model, selected vehicle, per-vehicle data
+- [ ] #4 Encrypted local store (SQLite, `.completeUntilFirstUserAuthentication`)
+- [ ] #5 Durable outbox and SyncEngine
+- [ ] #6 Local-first / Tailnet-fallback endpoint selection
+- [ ] #7 Trip snapshot on authenticated API
+- [ ] #8 Maintenance log, odometer corrections, trip annotations
+- [ ] #9 BLE session authentication (blocked on firmware Phase 22)
+- [ ] #10 Revocation state, identity reset, admin actions
+- [ ] #11 Privacy and log hygiene audit

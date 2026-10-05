@@ -14,6 +14,12 @@
 | 8 | `DEGRADED_GNSS` = internal receiver health | Clear when any source has a fix | Otherwise the phone masks an internal hardware fault |
 | 9 | Swift + SwiftUI + Observation + async/await | Combine, UIKit | Preferred stack; iOS 17 minimum |
 | 10 | Session follows the BLE link (auto-connect, no Start button) | Explicit Start / Stop | The dongle powering on is the signal; nobody taps a phone while driving. Cost: needs Always location authorization and on-device validation of background wake. Supersedes the explicit-start part of #7 |
+| 11 | P-256 / Secure Enclave for the app client key | Ed25519 | The Secure Enclave only holds P-256 keys; Ed25519 would require a software keychain, losing the hardware-bound non-exportability guarantee |
+| 12 | Per-request signatures, not mTLS | mTLS with client certificates | `tailscale serve` terminates TLS on the server host; the app never sees raw TLS, so client certs cannot be presented. Per-request ECDSA signatures travel inside the HTTP body/headers and work over any transport |
+| 13 | Vehicle-scoped data model (every bundle names a vehicle) | Single-vehicle / implicit | Two cars (2017 M240i B58, N20 428i) share one dongle pool; data must be attributable to a vehicle, not just a device |
+| 14 | `.completeUntilFirstUserAuthentication` protection class | `.afterFirstUnlock` / no protection | Background writes (outbox, cache) need the store while the phone is locked; `.complete` blocks access after lock. `.completeUntilFirstUserAuthentication` is available after the first unlock per boot and survives lock |
+| 15 | No data migration from v2 | Migration script | Local data is disposable (server is authoritative); a breaking change is cheaper than a migration path that must handle every intermediate schema |
+| 16 | Probe-only LAN detection (no SSID matching) | `NEHotspotNetwork` SSID check | Avoids the `NEHotspotNetwork` entitlement (requires Apple approval) and the location-permission dependency it brings. A lightweight HTTP probe to the LAN endpoint is sufficient and works on any network |
 
 ## Design review: what changed
 

@@ -142,3 +142,25 @@ Nothing has run against real firmware or a device yet. Treat the first end-to-en
 | Phase 2: `BARO_ALT` (`0002`) and `UTC_SYNC` (`0003`) | Not started. The app can discover safely — they won't be there yet |
 | Resource validation (stack HWM, heap, IMU deadlines under BLE+SD+WiFi) | Needs a drive with serial logging |
 | Drive test (phone vs internal accuracy, write rate, battery) | Needs a drive |
+
+---
+
+## v3 — BLE session authentication (future)
+
+Issue [#9](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/9) adds challenge-response authentication to BLE sessions. This work is **blocked on firmware Phase 22** and is listed here so the firmware side can plan for it.
+
+### What changes on the wire
+
+1. **Challenge-response using the enrolled app's Secure Enclave key.** After bonding, the dongle sends a random challenge; the app signs it with its P-256 key and returns the signature. The dongle verifies it against the enrolled public key before accepting writes. This prevents a stolen bond from injecting data.
+
+2. **Per-session write counter on `GNSS_FIX`.** Each authenticated session gets a monotonic write counter that the dongle tracks. Replayed or out-of-order writes are rejected. This is separate from the existing `seq` (which is display-level and wraps); the write counter is a session-scoped anti-replay mechanism.
+
+3. **Dongle `device_id` and assignment exposed for identity verification.** The dongle must expose its `device_id` (a stable identifier, e.g. from eFuse or NVS) so the app can confirm it is talking to an assigned device. The server holds the device-to-vehicle assignment; the app verifies the `device_id` matches the expected dongle for the selected vehicle.
+
+4. **`PROTOCOL_VERSION` major bump expected.** The authentication handshake changes the connection sequence (challenge must precede writes), so a major version bump is needed. The app already gates on `version == 1`; version 2 will require the challenge-response flow before enabling writes.
+
+### Dependencies
+
+- Firmware Phase 22 must define the challenge characteristic, the signature verification path, and the `device_id` exposure mechanism.
+- The app's Secure Enclave identity (issue #1) and enrolment flow (issue #2) must land first on the app side.
+- The server must hold the device assignment and the app's enrolled public key so both sides can verify each other.

@@ -124,7 +124,7 @@ The app expects the post-trip disconnect, shows it as "Connecting" with a retry 
 | BLE (phone) | CoreBluetooth central, state restoration |
 | BLE (dongle) | NimBLE-Arduino 2.2.x on ESP32 (Freematics ONE+ Model B) |
 | Wire format | Little-endian fixed binary, one message type per characteristic |
-| Trip data | [duckdb-swift](https://github.com/duckdb/duckdb-swift) over a downloaded Parquet snapshot, zstd for the archive |
+| Trip data | [duckdb-swift](https://github.com/duckdb/duckdb-swift) over a downloaded Parquet snapshot, plain tar (Parquet is already compressed) |
 | Local history | `Codable` JSON, one file per drive, in Application Support |
 
 ## Getting started
@@ -139,6 +139,8 @@ open CairnCompanion.xcodeproj
 ```
 
 Build and run on a device. For trip history, enter your Cairn server URL under **Settings** (it stays on the device). On first launch, grant **Always** location access (needed to start streaming from a background BLE wake) and Bluetooth. The first read of an encrypted characteristic makes iOS ask for the dongle's 6-digit passkey; after that, reconnects are silent. If the dongle's bond is reset, forget "Cairn" under Settings > Bluetooth first.
+
+> **v3 note:** The v3 architecture will replace the manual server URL setting with enrolled-client identity. The app will generate a Secure Enclave P-256 key, enrol with the server, and sign every request. See the [v3 roadmap](docs/roadmap.md#v3--authenticated-sync-and-multi-vehicle).
 
 Run the protocol tests, which need no radio or GPS:
 
@@ -164,6 +166,7 @@ xcrun simctl io booted screenshot docs/images/streaming-light.png
 | **1 — GPS reinforcement (MVP)** | iOS app + firmware: `GNSS_FIX`, `GNSS_QUALITY`, `COMPANION_STATUS`, bonding, dual recording, source-aware lifecycle, locked-screen session, DB compatibility | 🚧 running on hardware; validation in progress |
 | **2 — Enrichment** | Barometric altitude, phone UTC, compass heading, OBD + trip state notify, live dashboard | 🚧 app side built for `BARO_ALT`, `UTC_SYNC`, `OBD_LIVE`, `DEVICE_STATUS`; waiting on firmware |
 | **3 — Trips and history** | Local drive history, trip snapshot sync from your server, internal-vs-phone accuracy analysis, decide whether to power down internal GNSS when phone is connected | 🚧 history and snapshot sync built; not yet verified against a real server |
+| **v3 — Authenticated sync and multi-vehicle** | Secure Enclave identity, per-request signing, vehicle-scoped data, durable outbox, LAN/Tailnet endpoint selection, BLE session auth | planned; see [v3 tracking issue](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/13) |
 
 Phase 1 exit criteria are the [validation matrix](docs/validation.md): security, stale/invalid handling, drive tests, DB compatibility, and measured RAM / stack / battery / write-rate. Per-item checklists live in [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -179,6 +182,7 @@ Phase 1 exit criteria are the [validation matrix](docs/validation.md): security,
 | [`docs/decisions.md`](docs/decisions.md) | Decisions, design-review changes, open questions |
 | [`docs/plan-link-health-and-history.md`](docs/plan-link-health-and-history.md) | Link-health UI and History tab plan |
 | [`HANDOFF-FIRMWARE.md`](HANDOFF-FIRMWARE.md) | Firmware work list and the firmware repo's response |
+| [v3 tracking issue](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/13) | v3 authenticated sync and multi-vehicle |
 | [`docs/full-plan.md`](docs/full-plan.md) | Complete original plan document |
 
 ## Contributing
