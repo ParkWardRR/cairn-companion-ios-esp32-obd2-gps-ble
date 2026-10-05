@@ -4,15 +4,17 @@ import SwiftUI
 public struct HistoryView: View {
     let recorder: DriveRecorder
     let vehicleStore: GRDBVehicleStore
+    let maintenanceStore: GRDBMaintenanceStore
     let syncClient: TripSyncClient
     @State private var sessions: [DriveSession] = []
     @State private var serverTrips: [TripSnapshot] = []
     @State private var isLoading = true
     @State private var selectedVehicle: Vehicle?
 
-    public init(recorder: DriveRecorder, vehicleStore: GRDBVehicleStore, syncClient: TripSyncClient) {
+    public init(recorder: DriveRecorder, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient) {
         self.recorder = recorder
         self.vehicleStore = vehicleStore
+        self.maintenanceStore = maintenanceStore
         self.syncClient = syncClient
     }
 
@@ -69,7 +71,7 @@ public struct HistoryView: View {
         #endif
         .navigationDestination(for: String.self) { id in
             if let entry = entries.first(where: { $0.id == id }) {
-                DriveDetailView(entry: entry)
+                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore)
             }
         }
     }
@@ -217,6 +219,10 @@ private struct HistoryRow: View {
 
 private struct DriveDetailView: View {
     let entry: HistoryEntry
+    let maintenanceStore: GRDBMaintenanceStore
+    @State private var annotations: [Annotation] = []
+    @State private var showAddNote = false
+    @State private var noteText = ""
 
     var body: some View {
         ScrollView {
@@ -227,6 +233,7 @@ private struct DriveDetailView: View {
                 if let trip = entry.serverTrip {
                     serverSection(trip)
                 }
+                annotationSection
                 if let session = entry.phoneSession, !session.events.isEmpty {
                     eventTimeline(session)
                 }
@@ -237,6 +244,92 @@ private struct DriveDetailView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Menu {
+                    Button {
+                        toggleFavorite()
+                    } label: {
+                        let isFav = annotations.contains { $0.kind == .favorite }
+                        Label(isFav ? "Unfavorite" : "Favorite", systemImage: isFav ? "star.slash" : "star")
+                    }
+                    Button {
+                        showAddNote = true
+                    } label: {
+                        Label("Add Note", systemImage: "note.text.badge.plus")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .task { await loadAnnotations() }
+        .alert("Add Note", isPresented: $showAddNote) {
+            TextField("Note", text: $noteText)
+            Button("Save") {
+                guard !noteText.isEmpty else { return }
+                let annotation = Annotation(
+                    vehicleID: entry.phoneSession?.vehicleID,
+                    targetID: entry.id,
+                    text: noteText
+                )
+                Task {
+                    try? await maintenanceStore.saveAnnotation(annotation)
+                    noteText = ""
+                    await loadAnnotations()
+                }
+            }
+            Button("Cancel", role: .cancel) { noteText = "" }
+        }
+    }
+
+    @ViewBuilder
+    private var annotationSection: some View {
+        if !annotations.isEmpty {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(annotations) { annotation in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: annotation.kind.systemImage)
+                                .foregroundStyle(annotation.kind == .favorite ? .yellow : .secondary)
+                                .frame(width: 16)
+                            if annotation.kind != .favorite {
+                                Text(annotation.text)
+                                    .font(.callout)
+                            }
+                            Spacer()
+                            Text(annotation.updatedAt, style: .date)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            } label: {
+                Text("Notes")
+            }
+        }
+    }
+
+    private func loadAnnotations() async {
+        annotations = (try? await maintenanceStore.annotations(forTarget: entry.id)) ?? []
+    }
+
+    private func toggleFavorite() {
+        Task {
+            if let existing = annotations.first(where: { $0.kind == .favorite }) {
+                try? await maintenanceStore.deleteAnnotation(existing.id)
+            } else {
+                let fav = Annotation(
+                    vehicleID: entry.phoneSession?.vehicleID,
+                    targetID: entry.id,
+                    kind: .favorite,
+                    text: ""
+                )
+                try? await maintenanceStore.saveAnnotation(fav)
+            }
+            await loadAnnotations()
+        }
     }
 
     @ViewBuilder

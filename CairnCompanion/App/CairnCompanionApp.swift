@@ -5,6 +5,7 @@ import SwiftUI
 struct CairnCompanionApp: App {
     private let session: DrivingSession
     private let vehicleStore: GRDBVehicleStore
+    private let maintenanceStore: GRDBMaintenanceStore
     private let syncClient: TripSyncClient
     @Environment(\.scenePhase) private var scenePhase
 
@@ -13,10 +14,12 @@ struct CairnCompanionApp: App {
         let db = try! CairnDatabase()
         let driveStore = GRDBDriveStore(db: db)
         let vehicleStore = GRDBVehicleStore(db: db)
+        let maintenanceStore = GRDBMaintenanceStore(db: db)
         let recorder = DriveRecorder(store: driveStore, vehicleStore: vehicleStore)
         let ble = CairnBLEManager(state: state)
         session = DrivingSession(state: state, ble: ble, recorder: recorder)
         self.vehicleStore = vehicleStore
+        self.maintenanceStore = maintenanceStore
         syncClient = TripSyncClient()
         #if DEBUG
         if let scenario = DemoMode.scenario {
@@ -34,17 +37,17 @@ struct CairnCompanionApp: App {
             #if DEBUG
             if let scale = DemoMode.scale {
                 GeometryReader { proxy in
-                    RootView(session: session, vehicleStore: vehicleStore, syncClient: syncClient)
+                    RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
                         .frame(width: proxy.size.width / scale, height: proxy.size.height / scale)
                         .scaleEffect(scale, anchor: .top)
                         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
                 .ignoresSafeArea(edges: .bottom)
             } else {
-                RootView(session: session, vehicleStore: vehicleStore, syncClient: syncClient)
+                RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
             }
             #else
-            RootView(session: session, vehicleStore: vehicleStore, syncClient: syncClient)
+            RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
             #endif
         }
         .onChange(of: scenePhase) { _, phase in
