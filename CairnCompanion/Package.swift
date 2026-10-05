@@ -10,6 +10,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/duckdb/duckdb-swift", from: "1.0.0"),
+        .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
     ],
     targets: [
         // Wire format, validity mapping, and staleness rules. No UI, no live radio or GPS,
@@ -21,6 +22,7 @@ let package = Package(
         .target(name: "CairnRuntime", dependencies: [
             "CairnCore",
             .product(name: "DuckDB", package: "duckdb-swift"),
+            .product(name: "GRDB", package: "GRDB.swift"),
         ]),
     ]
 )

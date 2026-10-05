@@ -8,8 +8,8 @@ import os
 @MainActor
 public final class DriveRecorder {
     private static let log = Logger(subsystem: "app.cairn.companion", category: "recorder")
-    private let store: FileDriveStore
-    private let vehicleStore: FileVehicleStore
+    private let store: any DriveStore
+    private let vehicleStore: any VehicleStore
     private var current: DriveSession?
     private var lastCheckpoint: Date?
     private var gapStartedAt: Date?
@@ -17,7 +17,7 @@ public final class DriveRecorder {
     private var lastStreamingState = false
     private var streamingStart: Date?
 
-    public init(store: FileDriveStore, vehicleStore: FileVehicleStore) {
+    public init(store: any DriveStore, vehicleStore: any VehicleStore) {
         self.store = store
         self.vehicleStore = vehicleStore
     }
@@ -181,7 +181,6 @@ public final class DriveRecorder {
                     DriveSegmenter.reconcile(session: &sessions[i], bleRestored: bleRestored, now: now)
                     try await store.save(sessions[i])
                 }
-                try await store.applyRetention()
             } catch {
                 Self.log.error("reconcile failed: \(error)")
             }

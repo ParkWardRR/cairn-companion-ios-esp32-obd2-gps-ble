@@ -3,10 +3,10 @@ import SwiftUI
 
 public struct RootView: View {
     private let session: DrivingSession
-    private let vehicleStore: FileVehicleStore
+    private let vehicleStore: GRDBVehicleStore
     private let syncClient: TripSyncClient
 
-    public init(session: DrivingSession, vehicleStore: FileVehicleStore, syncClient: TripSyncClient) {
+    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, syncClient: TripSyncClient) {
         self.session = session
         self.vehicleStore = vehicleStore
         self.syncClient = syncClient

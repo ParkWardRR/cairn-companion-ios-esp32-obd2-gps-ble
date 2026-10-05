@@ -62,8 +62,10 @@ public final class CairnBLEManager: NSObject {
     }
 
     private func trace(_ message: String) {
-        Self.log.notice("\(message, privacy: .public)")
-        print("[ble]", message) // visible with `devicectl ... --console`
+        Self.log.notice("\(message, privacy: .private)")
+        #if DEBUG
+        print("[ble]", message)
+        #endif
         DriveLog.shared.record("ble \(message)")
     }
 

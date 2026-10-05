@@ -44,6 +44,20 @@ public final class TripSyncClient {
         if let data = UserDefaults.standard.data(forKey: Self.manifestKey) {
             manifest = try? JSONDecoder().decode(SnapshotManifest.self, from: data)
         }
+        Self.protectSnapshotDir(snapshotDir)
+    }
+
+    private static func protectSnapshotDir(_ dir: URL) {
+        var url = dir
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
+        #if os(iOS)
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: dir.path
+        )
+        #endif
     }
 
     public var serverURL: String {

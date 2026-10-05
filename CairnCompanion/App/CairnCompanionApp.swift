@@ -4,15 +4,16 @@ import SwiftUI
 @main
 struct CairnCompanionApp: App {
     private let session: DrivingSession
-    private let vehicleStore: FileVehicleStore
+    private let vehicleStore: GRDBVehicleStore
     private let syncClient: TripSyncClient
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let state = SessionState()
-        let store = FileDriveStore()
-        let vehicleStore = FileVehicleStore()
-        let recorder = DriveRecorder(store: store, vehicleStore: vehicleStore)
+        let db = try! CairnDatabase()
+        let driveStore = GRDBDriveStore(db: db)
+        let vehicleStore = GRDBVehicleStore(db: db)
+        let recorder = DriveRecorder(store: driveStore, vehicleStore: vehicleStore)
         let ble = CairnBLEManager(state: state)
         session = DrivingSession(state: state, ble: ble, recorder: recorder)
         self.vehicleStore = vehicleStore

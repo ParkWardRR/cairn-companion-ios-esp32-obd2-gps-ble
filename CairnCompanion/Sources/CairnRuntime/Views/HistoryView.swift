@@ -3,14 +3,14 @@ import SwiftUI
 
 public struct HistoryView: View {
     let recorder: DriveRecorder
-    let vehicleStore: FileVehicleStore
+    let vehicleStore: GRDBVehicleStore
     let syncClient: TripSyncClient
     @State private var sessions: [DriveSession] = []
     @State private var serverTrips: [TripSnapshot] = []
     @State private var isLoading = true
     @State private var selectedVehicle: Vehicle?
 
-    public init(recorder: DriveRecorder, vehicleStore: FileVehicleStore, syncClient: TripSyncClient) {
+    public init(recorder: DriveRecorder, vehicleStore: GRDBVehicleStore, syncClient: TripSyncClient) {
         self.recorder = recorder
         self.vehicleStore = vehicleStore
         self.syncClient = syncClient

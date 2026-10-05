@@ -3,7 +3,7 @@ import SwiftUI
 
 public struct SettingsView: View {
     let session: DrivingSession
-    let vehicleStore: FileVehicleStore
+    let vehicleStore: GRDBVehicleStore
     let syncClient: TripSyncClient
     @State private var serverURL: String = ""
     @State private var showDeleteConfirm = false
@@ -11,7 +11,7 @@ public struct SettingsView: View {
     @State private var selectedVehicleID: String?
     @State private var showAddVehicle = false
 
-    public init(session: DrivingSession, vehicleStore: FileVehicleStore, syncClient: TripSyncClient) {
+    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, syncClient: TripSyncClient) {
         self.session = session
         self.vehicleStore = vehicleStore
         self.syncClient = syncClient
