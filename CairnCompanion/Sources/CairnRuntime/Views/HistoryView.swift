@@ -3,13 +3,16 @@ import SwiftUI
 
 public struct HistoryView: View {
     let recorder: DriveRecorder
+    let vehicleStore: FileVehicleStore
     let syncClient: TripSyncClient
     @State private var sessions: [DriveSession] = []
     @State private var serverTrips: [TripSnapshot] = []
     @State private var isLoading = true
+    @State private var selectedVehicle: Vehicle?
 
-    public init(recorder: DriveRecorder, syncClient: TripSyncClient) {
+    public init(recorder: DriveRecorder, vehicleStore: FileVehicleStore, syncClient: TripSyncClient) {
         self.recorder = recorder
+        self.vehicleStore = vehicleStore
         self.syncClient = syncClient
     }
 
@@ -32,7 +35,7 @@ public struct HistoryView: View {
                     driveList
                 }
             }
-            .navigationTitle("History")
+            .navigationTitle(selectedVehicle?.displayName ?? "History")
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     syncButton
@@ -91,7 +94,13 @@ public struct HistoryView: View {
 
     private func load() async {
         isLoading = true
-        sessions = (try? await recorder.allSessions()) ?? []
+        if let vid = vehicleStore.selectedVehicleID() {
+            selectedVehicle = try? await vehicleStore.vehicle(vid)
+            sessions = (try? await recorder.sessions(forVehicle: vid)) ?? []
+        } else {
+            selectedVehicle = nil
+            sessions = (try? await recorder.allSessions()) ?? []
+        }
         serverTrips = syncClient.cachedTrips()
         isLoading = false
     }

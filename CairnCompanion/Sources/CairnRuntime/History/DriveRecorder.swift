@@ -9,6 +9,7 @@ import os
 public final class DriveRecorder {
     private static let log = Logger(subsystem: "app.cairn.companion", category: "recorder")
     private let store: FileDriveStore
+    private let vehicleStore: FileVehicleStore
     private var current: DriveSession?
     private var lastCheckpoint: Date?
     private var gapStartedAt: Date?
@@ -16,8 +17,9 @@ public final class DriveRecorder {
     private var lastStreamingState = false
     private var streamingStart: Date?
 
-    public init(store: FileDriveStore) {
+    public init(store: FileDriveStore, vehicleStore: FileVehicleStore) {
         self.store = store
+        self.vehicleStore = vehicleStore
     }
 
     // MARK: - Session lifecycle
@@ -35,7 +37,8 @@ public final class DriveRecorder {
             current = session
             checkpoint()
         } else {
-            var session = DriveSession(deviceID: deviceID, startedAt: Date())
+            let vid = resolveVehicleID(deviceID: deviceID)
+            var session = DriveSession(deviceID: deviceID, vehicleID: vid, startedAt: Date())
             session.events.append(LinkEvent(at: Date(), kind: .ready))
             session.epochs.append(CounterEpoch(startedAt: Date()))
             current = session
@@ -43,6 +46,13 @@ public final class DriveRecorder {
             streamingStart = nil
             checkpoint()
         }
+    }
+
+    private func resolveVehicleID(deviceID: String?) -> String? {
+        if let deviceID, let assigned = try? vehicleStore.vehicleID(forDongle: deviceID) {
+            return assigned
+        }
+        return vehicleStore.selectedVehicleID()
     }
 
     /// BLE link dropped. The session enters gap-pending; it closes if the gap exceeds the threshold.
@@ -194,6 +204,19 @@ public final class DriveRecorder {
     /// All recorded sessions (for the History tab).
     public func allSessions() async throws -> [DriveSession] {
         try await store.list()
+    }
+
+    /// Sessions for a specific vehicle.
+    public func sessions(forVehicle vehicleID: String) async throws -> [DriveSession] {
+        try await store.list(vehicleID: vehicleID)
+    }
+
+    /// Sessions for the currently selected vehicle, or all if none selected.
+    public func sessionsForSelectedVehicle() async throws -> [DriveSession] {
+        if let vid = vehicleStore.selectedVehicleID() {
+            return try await store.list(vehicleID: vid)
+        }
+        return try await store.list()
     }
 
     /// Delete a specific drive.

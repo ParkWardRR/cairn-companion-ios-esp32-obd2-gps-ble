@@ -54,6 +54,10 @@ public actor FileDriveStore: DriveStore {
         .sorted { $0.startedAt > $1.startedAt }
     }
 
+    public func list(vehicleID: String) throws -> [DriveSession] {
+        try list().filter { $0.vehicleID == vehicleID }
+    }
+
     public func get(_ id: UUID) throws -> DriveSession? {
         let url = fileURL(for: id)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
@@ -89,11 +93,24 @@ public actor FileDriveStore: DriveStore {
     // MARK: - Retention
 
     public func applyRetention() throws {
-        var sessions = try list()
+        let sessions = try list()
         guard sessions.count > Self.maxDrives else { return }
         let excess = sessions.suffix(from: Self.maxDrives)
         for session in excess where session.lifecycle == .closed {
             try delete(session.id)
+        }
+    }
+
+    public func wipeV1DataIfNeeded() throws {
+        try ensureDirectory()
+        let files = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" && $0.lastPathComponent != "index.json" }
+        for url in files {
+            guard let data = try? Data(contentsOf: url),
+                  let session = try? decoder.decode(DriveSession.self, from: data),
+                  session.schemaVersion < DriveSession.schemaVersion else { continue }
+            try? FileManager.default.removeItem(at: url)
+            Self.log.info("wiped v\(session.schemaVersion) drive \(url.lastPathComponent)")
         }
     }
 }

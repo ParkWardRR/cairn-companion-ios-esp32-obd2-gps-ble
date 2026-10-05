@@ -6,10 +6,11 @@ import Foundation
 /// BLE readiness starts a session; the session ends when the link has been down longer than
 /// `DriveSegmenter.gapThreshold` or when the user disarms.
 public struct DriveSession: Codable, Identifiable, Sendable, Equatable {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
 
     public let id: UUID
     public let deviceID: String?
+    public var vehicleID: String?
     public var schemaVersion: Int = Self.schemaVersion
     public var lifecycle: Lifecycle
     public var startedAt: Date
@@ -57,10 +58,12 @@ public struct DriveSession: Codable, Identifiable, Sendable, Equatable {
     public init(
         id: UUID = UUID(),
         deviceID: String? = nil,
+        vehicleID: String? = nil,
         startedAt: Date = Date()
     ) {
         self.id = id
         self.deviceID = deviceID
+        self.vehicleID = vehicleID
         self.lifecycle = .active
         self.startedAt = startedAt
         self.lastObservedAt = startedAt

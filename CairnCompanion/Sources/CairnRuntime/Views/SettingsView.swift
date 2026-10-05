@@ -3,26 +3,126 @@ import SwiftUI
 
 public struct SettingsView: View {
     let session: DrivingSession
+    let vehicleStore: FileVehicleStore
     let syncClient: TripSyncClient
     @State private var serverURL: String = ""
     @State private var showDeleteConfirm = false
+    @State private var vehicles: [Vehicle] = []
+    @State private var selectedVehicleID: String?
+    @State private var showAddVehicle = false
 
-    public init(session: DrivingSession, syncClient: TripSyncClient) {
+    public init(session: DrivingSession, vehicleStore: FileVehicleStore, syncClient: TripSyncClient) {
         self.session = session
+        self.vehicleStore = vehicleStore
         self.syncClient = syncClient
     }
 
     public var body: some View {
         NavigationStack {
             Form {
+                vehicleSection
                 serverSection
                 syncStatusSection
                 dangerZone
             }
             .navigationTitle("Settings")
-            .onAppear { serverURL = syncClient.serverURL }
+            .onAppear {
+                serverURL = syncClient.serverURL
+                selectedVehicleID = vehicleStore.selectedVehicleID()
+            }
+            .task { await loadVehicles() }
+            .sheet(isPresented: $showAddVehicle) {
+                AddVehicleSheet { vehicle in
+                    Task {
+                        try? await vehicleStore.saveVehicle(vehicle)
+                        vehicleStore.selectVehicle(vehicle.id)
+                        selectedVehicleID = vehicle.id
+                        await loadVehicles()
+                    }
+                }
+            }
         }
     }
+
+    // MARK: - Vehicles
+
+    @ViewBuilder
+    private var vehicleSection: some View {
+        Section {
+            if vehicles.isEmpty {
+                Text("No vehicles configured")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(vehicles.filter { !$0.isArchived }) { vehicle in
+                    Button {
+                        selectedVehicleID = vehicle.id
+                        vehicleStore.selectVehicle(vehicle.id)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(vehicle.displayName)
+                                    .foregroundStyle(.primary)
+                            }
+                            Spacer()
+                            if selectedVehicleID == vehicle.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            Task {
+                                var archived = vehicle
+                                archived.isArchived = true
+                                try? await vehicleStore.saveVehicle(archived)
+                                await loadVehicles()
+                            }
+                        } label: {
+                            Label("Archive", systemImage: "archivebox")
+                        }
+                        .tint(.orange)
+                    }
+                }
+
+                let archived = vehicles.filter { $0.isArchived }
+                if !archived.isEmpty {
+                    DisclosureGroup("Archived") {
+                        ForEach(archived) { vehicle in
+                            HStack {
+                                Text(vehicle.displayName)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button {
+                                    Task {
+                                        var restored = vehicle
+                                        restored.isArchived = false
+                                        try? await vehicleStore.saveVehicle(restored)
+                                        await loadVehicles()
+                                    }
+                                } label: {
+                                    Text("Restore")
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button {
+                showAddVehicle = true
+            } label: {
+                Label("Add Vehicle", systemImage: "plus.circle")
+            }
+        } header: {
+            Text("Vehicles")
+        } footer: {
+            Text("Select the active vehicle. Drive sessions are recorded against the selected vehicle.")
+        }
+    }
+
+    // MARK: - Server
 
     @ViewBuilder
     private var serverSection: some View {
@@ -131,5 +231,70 @@ public struct SettingsView: View {
     private func formattedCount(_ n: Int) -> String {
         if n < 1000 { return "\(n)" }
         return String(format: "%.1fk", Double(n) / 1000)
+    }
+
+    private func loadVehicles() async {
+        vehicles = (try? await vehicleStore.listVehicles()) ?? []
+    }
+}
+
+// MARK: - Add Vehicle Sheet
+
+private struct AddVehicleSheet: View {
+    let onSave: (Vehicle) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var year: String = ""
+    @State private var make: String = ""
+    @State private var model: String = ""
+    @State private var engineCode: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Year", text: $year)
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #endif
+                    TextField("Make", text: $make)
+                    TextField("Model", text: $model)
+                    TextField("Engine code (optional)", text: $engineCode)
+                }
+                Section {
+                    if let preview = previewName {
+                        Text(preview)
+                            .font(.headline)
+                    }
+                }
+            }
+            .navigationTitle("Add Vehicle")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard let y = Int(year), !make.isEmpty, !model.isEmpty else { return }
+                        let vehicle = Vehicle(
+                            year: y, make: make, model: model,
+                            engineCode: engineCode.isEmpty ? nil : engineCode
+                        )
+                        onSave(vehicle)
+                        dismiss()
+                    }
+                    .disabled(Int(year) == nil || make.isEmpty || model.isEmpty)
+                }
+            }
+        }
+    }
+
+    private var previewName: String? {
+        guard let y = Int(year), !make.isEmpty, !model.isEmpty else { return nil }
+        var parts = ["\(y)", make, model]
+        if !engineCode.isEmpty { parts.append("— \(engineCode)") }
+        return parts.joined(separator: " ")
     }
 }

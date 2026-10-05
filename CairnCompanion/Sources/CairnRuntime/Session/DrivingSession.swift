@@ -36,9 +36,17 @@ public final class DrivingSession {
         ble.onLinkLost = { [weak self] in self?.endDriving() }
         ble.onStatus = { [weak self] status in self?.recorder.recordStatus(status) }
         ble.onStreamingChanged = { [weak self] streaming in self?.recorder.recordStreamingChange(isStreaming: streaming) }
-        ble.onOBDReceived = { [weak self] in self?.recorder.noteOBDReceived() }
+        ble.onOBDReceived = { [weak self] in
+            self?.recorder.noteOBDReceived()
+            self?.activateBackgroundSessionIfNeeded()
+        }
         ble.onDeviceStatus = { [weak self] status in
-            if status.tripPhase == .driving { self?.recorder.noteDeviceDriving() }
+            if status.tripPhase == .driving {
+                self?.recorder.noteDeviceDriving()
+                self?.activateBackgroundSessionIfNeeded()
+            } else if status.tripPhase == .idle {
+                self?.deactivateBackgroundSession()
+            }
         }
     }
 
@@ -97,9 +105,6 @@ public final class DrivingSession {
         throttle.reset()
         recorder.linkReady(deviceID: nil)
         recorder.newCounterEpoch()
-        #if os(iOS)
-        backgroundSession = CLBackgroundActivitySession()
-        #endif
         locationTask = Task { [weak self] in
             for await event in LocationStream.events() {
                 self?.handle(event)
@@ -153,6 +158,23 @@ public final class DrivingSession {
         state.isDriving = false
         state.phoneFix = nil
         state.locationMessage = nil
+    }
+
+    private func activateBackgroundSessionIfNeeded() {
+        #if os(iOS)
+        guard backgroundSession == nil, state.isDriving else { return }
+        backgroundSession = CLBackgroundActivitySession()
+        log("background session activated — device reports driving")
+        #endif
+    }
+
+    private func deactivateBackgroundSession() {
+        #if os(iOS)
+        guard backgroundSession != nil else { return }
+        backgroundSession?.invalidate()
+        backgroundSession = nil
+        log("background session deactivated — device reports idle")
+        #endif
     }
 
     private func handle(_ event: LocationEvent) {
