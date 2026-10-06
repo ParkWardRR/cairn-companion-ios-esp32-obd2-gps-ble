@@ -5,21 +5,22 @@ import os
 /// Downloads the snapshot archive from the Cairn server, decompresses and extracts it,
 /// loads the Parquet files into an in-memory DuckDB, and provides trip data for the History tab.
 ///
-/// The server URL is stored in UserDefaults so it can be set from Settings. No URL is hardcoded.
-///
-/// Sync triggers:
-/// - Manual sync button in the History tab or Settings
-/// - On app launch if the cached snapshot is stale
+/// Supports two server endpoints (LAN and Tailnet) with automatic route selection.
+/// The LAN URL is probed first; if it doesn't respond within 2 s the Tailnet URL is tried.
+/// Both routes must return the same `instance_id` from `/v1/health`.
 ///
 /// The snapshot is replaced atomically. If the download fails, the previous cache stays valid.
 @MainActor
 public final class TripSyncClient {
     private static let log = Logger(subsystem: "app.cairn.companion", category: "sync")
     private static let staleAfter: TimeInterval = 3600
-    private static let serverURLKey = "cairn.tripSyncServerURL"
+    private static let lanURLKey = "cairn.tripSyncServerURL"
+    private static let tailnetURLKey = "cairn.tailnetServerURL"
     private static let etagKey = "cairn.snapshotETag"
     private static let lastSyncKey = "cairn.lastSnapshotSync"
     private static let manifestKey = "cairn.snapshotManifest"
+    private static let instanceIDKey = "cairn.enrolledInstanceID"
+    private static let lanProbeTimeout: TimeInterval = 2
 
     public enum SyncState: Sendable, Equatable {
         case idle
@@ -27,9 +28,26 @@ public final class TripSyncClient {
         case failed(String)
     }
 
+    public enum Route: String, Sendable {
+        case lan = "LAN"
+        case tailnet = "Tailnet"
+        case unreachable = "Unreachable"
+    }
+
+    public struct ProbeResult: Sendable {
+        public let route: Route
+        public let latencyMs: Int
+        public let instanceID: String?
+        public let error: String?
+        public let probedAt: Date
+    }
+
     public private(set) var state: SyncState = .idle
     public private(set) var lastSyncAt: Date?
     public private(set) var manifest: SnapshotManifest?
+    public private(set) var activeRoute: Route = .unreachable
+    public private(set) var lastLANProbe: ProbeResult?
+    public private(set) var lastTailnetProbe: ProbeResult?
 
     private let store = SnapshotStore()
     private var cachedSnapshots: [TripSnapshot] = []
@@ -60,16 +78,120 @@ public final class TripSyncClient {
         #endif
     }
 
+    // MARK: - URL Management
+
     public var serverURL: String {
-        get { UserDefaults.standard.string(forKey: Self.serverURLKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: Self.serverURLKey) }
+        get { lanURL }
+        set { lanURL = newValue }
+    }
+
+    public var lanURL: String {
+        get { UserDefaults.standard.string(forKey: Self.lanURLKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: Self.lanURLKey) }
+    }
+
+    public var tailnetURL: String {
+        get { UserDefaults.standard.string(forKey: Self.tailnetURLKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: Self.tailnetURLKey) }
     }
 
     public var hasServer: Bool {
-        !serverURL.isEmpty && URL(string: serverURL) != nil
+        hasLAN || hasTailnet
     }
 
-    /// Load cached Parquet files into DuckDB on launch. Runs off the main actor.
+    public var hasLAN: Bool {
+        !lanURL.isEmpty && URL(string: lanURL) != nil
+    }
+
+    public var hasTailnet: Bool {
+        !tailnetURL.isEmpty && URL(string: tailnetURL) != nil
+    }
+
+    public var enrolledInstanceID: String? {
+        get { UserDefaults.standard.string(forKey: Self.instanceIDKey) }
+        set {
+            if let newValue {
+                UserDefaults.standard.set(newValue, forKey: Self.instanceIDKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.instanceIDKey)
+            }
+        }
+    }
+
+    // MARK: - Health Probe
+
+    public func probeEndpoints() async {
+        async let lanResult = probe(urlString: lanURL, route: .lan, timeout: Self.lanProbeTimeout)
+        async let tailnetResult = probe(urlString: tailnetURL, route: .tailnet, timeout: 10)
+
+        lastLANProbe = await lanResult
+        lastTailnetProbe = await tailnetResult
+
+        if let lan = lastLANProbe, lan.error == nil, lan.instanceID != nil {
+            activeRoute = .lan
+        } else if let tailnet = lastTailnetProbe, tailnet.error == nil, tailnet.instanceID != nil {
+            activeRoute = .tailnet
+        } else {
+            activeRoute = .unreachable
+        }
+    }
+
+    private func probe(urlString: String, route: Route, timeout: TimeInterval) async -> ProbeResult? {
+        guard !urlString.isEmpty, let base = URL(string: urlString) else { return nil }
+        let healthURL = base.appendingPathComponent("v1/health")
+        var request = URLRequest(url: healthURL)
+        request.timeoutInterval = timeout
+
+        let start = Date()
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let latency = Int(Date().timeIntervalSince(start) * 1000)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                return ProbeResult(route: route, latencyMs: latency, instanceID: nil,
+                                   error: "HTTP \(code)", probedAt: Date())
+            }
+            let instanceID = parseInstanceID(from: data)
+            return ProbeResult(route: route, latencyMs: latency, instanceID: instanceID,
+                               error: nil, probedAt: Date())
+        } catch {
+            let latency = Int(Date().timeIntervalSince(start) * 1000)
+            return ProbeResult(route: route, latencyMs: latency, instanceID: nil,
+                               error: error.localizedDescription, probedAt: Date())
+        }
+    }
+
+    private func parseInstanceID(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return json["instance_id"] as? String
+    }
+
+    /// Resolve the best base URL: try LAN first, fall back to Tailnet.
+    private func resolveBaseURL() async -> (URL, Route)? {
+        if hasLAN, let lanBase = URL(string: lanURL) {
+            let result = await probe(urlString: lanURL, route: .lan, timeout: Self.lanProbeTimeout)
+            lastLANProbe = result
+            if let r = result, r.error == nil {
+                activeRoute = .lan
+                return (lanBase, .lan)
+            }
+        }
+
+        if hasTailnet, let tailnetBase = URL(string: tailnetURL) {
+            let result = await probe(urlString: tailnetURL, route: .tailnet, timeout: 10)
+            lastTailnetProbe = result
+            if let r = result, r.error == nil {
+                activeRoute = .tailnet
+                return (tailnetBase, .tailnet)
+            }
+        }
+
+        activeRoute = .unreachable
+        return nil
+    }
+
+    // MARK: - Snapshot Cache
+
     public func loadCachedSnapshot() async {
         let dir = snapshotDir.appendingPathComponent("parquet", isDirectory: true)
         guard FileManager.default.fileExists(atPath: dir.path) else { return }
@@ -88,23 +210,28 @@ public final class TripSyncClient {
         }
     }
 
-    /// Trip snapshots from the last loaded snapshot.
     public func cachedTrips() -> [TripSnapshot] {
         cachedSnapshots
     }
 
-    /// Trigger a sync. Downloads the snapshot archive, decompresses, and loads into DuckDB.
+    // MARK: - Sync
+
     public func sync() {
         guard state != .syncing else { return }
-        guard let base = URL(string: serverURL), !serverURL.isEmpty else {
+        guard hasServer else {
             state = .failed("No server configured")
             return
         }
         state = .syncing
-        Task { await performSync(baseURL: base) }
+        Task { await performSync() }
     }
 
-    private func performSync(baseURL: URL) async {
+    private func performSync() async {
+        guard let (baseURL, route) = await resolveBaseURL() else {
+            state = .failed("Server unreachable on both LAN and Tailnet")
+            return
+        }
+
         do {
             var components = URLComponents(url: baseURL.appendingPathComponent("api/snapshot"), resolvingAgainstBaseURL: false)!
             components.queryItems = [URLQueryItem(name: "format", value: "tar")]
@@ -125,7 +252,7 @@ public final class TripSyncClient {
                 lastSyncAt = Date()
                 UserDefaults.standard.set(lastSyncAt, forKey: Self.lastSyncKey)
                 state = .idle
-                Self.log.notice("snapshot unchanged (304)")
+                Self.log.notice("snapshot unchanged (304) via \(route.rawValue)")
                 return
             }
 
@@ -148,8 +275,9 @@ public final class TripSyncClient {
             }
             lastSyncAt = Date()
             UserDefaults.standard.set(lastSyncAt, forKey: Self.lastSyncKey)
+            activeRoute = route
             state = .idle
-            Self.log.notice("synced \(self.cachedSnapshots.count) trips from \(extracted.manifest.bundleCount) bundles")
+            Self.log.notice("synced \(self.cachedSnapshots.count) trips via \(route.rawValue)")
         } catch {
             state = .failed(error.localizedDescription)
             Self.log.error("sync failed: \(error)")

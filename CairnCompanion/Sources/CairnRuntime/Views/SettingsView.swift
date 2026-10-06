@@ -4,9 +4,11 @@ import SwiftUI
 public struct SettingsView: View {
     let session: DrivingSession
     let syncClient: TripSyncClient
-    @State private var serverURL: String = ""
+    @State private var lanURL: String = ""
+    @State private var tailnetURL: String = ""
     @State private var showDeleteConfirm = false
     @State private var showServerSetup = false
+    @State private var isProbing = false
 
     public init(session: DrivingSession, syncClient: TripSyncClient) {
         self.session = session
@@ -18,6 +20,7 @@ public struct SettingsView: View {
             Form {
                 serverSection
                 if syncClient.hasServer {
+                    diagnosticsSection
                     syncStatusSection
                 }
                 aboutSection
@@ -25,7 +28,8 @@ public struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .onAppear {
-                serverURL = syncClient.serverURL
+                lanURL = syncClient.lanURL
+                tailnetURL = syncClient.tailnetURL
             }
         }
     }
@@ -36,15 +40,35 @@ public struct SettingsView: View {
     private var serverSection: some View {
         if syncClient.hasServer || showServerSetup {
             Section {
-                TextField("https://cairn.example.lan", text: $serverURL)
-                    .textContentType(.URL)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
-                    .onSubmit { saveURL() }
-                    .onChange(of: serverURL) { _, _ in saveURL() }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("LAN")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    TextField("https://cairn.example.lan", text: $lanURL)
+                        .textContentType(.URL)
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        #endif
+                        .onSubmit { saveLAN() }
+                        .onChange(of: lanURL) { _, _ in saveLAN() }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tailnet")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    TextField("https://cairn.ts.net", text: $tailnetURL)
+                        .textContentType(.URL)
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        #endif
+                        .onSubmit { saveTailnet() }
+                        .onChange(of: tailnetURL) { _, _ in saveTailnet() }
+                }
 
                 if syncClient.hasServer {
                     Button {
@@ -63,7 +87,7 @@ public struct SettingsView: View {
             } header: {
                 Text("Cairn Server")
             } footer: {
-                Text("Optional. Connect to your Cairn server to sync trip data. The app works fully offline without a server.")
+                Text("The LAN URL is tried first. If unreachable, the Tailnet URL is used as fallback. Both must point to the same server instance.")
             }
         } else {
             Section {
@@ -91,6 +115,96 @@ public struct SettingsView: View {
             }
         }
     }
+
+    // MARK: - Diagnostics
+
+    @ViewBuilder
+    private var diagnosticsSection: some View {
+        Section {
+            HStack {
+                Text("Active Route")
+                Spacer()
+                routeBadge(syncClient.activeRoute)
+            }
+
+            if let lan = syncClient.lastLANProbe {
+                probeRow("LAN", probe: lan)
+            }
+
+            if let tailnet = syncClient.lastTailnetProbe {
+                probeRow("Tailnet", probe: tailnet)
+            }
+
+            Button {
+                isProbing = true
+                Task {
+                    await syncClient.probeEndpoints()
+                    isProbing = false
+                }
+            } label: {
+                HStack {
+                    Text("Test Connection")
+                    Spacer()
+                    if isProbing {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isProbing)
+        } header: {
+            Text("Diagnostics")
+        }
+    }
+
+    @ViewBuilder
+    private func routeBadge(_ route: TripSyncClient.Route) -> some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(routeColor(route))
+                .frame(width: 7, height: 7)
+            Text(route.rawValue)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(routeColor(route))
+        }
+    }
+
+    private func routeColor(_ route: TripSyncClient.Route) -> Color {
+        switch route {
+        case .lan: .green
+        case .tailnet: .blue
+        case .unreachable: .red
+        }
+    }
+
+    @ViewBuilder
+    private func probeRow(_ label: String, probe: TripSyncClient.ProbeResult) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline)
+                if let error = probe.error {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .lineLimit(1)
+                } else {
+                    Text("\(probe.latencyMs) ms")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if probe.error == nil {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    // MARK: - Sync Status
 
     @ViewBuilder
     private var syncStatusSection: some View {
@@ -176,9 +290,12 @@ public struct SettingsView: View {
         }
     }
 
-    private func saveURL() {
-        let trimmed = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        syncClient.serverURL = trimmed
+    private func saveLAN() {
+        syncClient.lanURL = lanURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func saveTailnet() {
+        syncClient.tailnetURL = tailnetURL.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func formattedCount(_ n: Int) -> String {

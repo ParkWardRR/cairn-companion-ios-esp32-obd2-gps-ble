@@ -50,8 +50,9 @@ struct MaintenanceEntryTests {
     }
 
     @Test func hashable() {
-        let e1 = MaintenanceEntry(id: "m1", vehicleID: "v1", category: .oilChange, performedAt: Date(), title: "Oil")
-        let e2 = MaintenanceEntry(id: "m1", vehicleID: "v1", category: .oilChange, performedAt: Date(), title: "Oil")
+        let date = Date(timeIntervalSince1970: 1700000000)
+        let e1 = MaintenanceEntry(id: "m1", vehicleID: "v1", category: .oilChange, performedAt: date, createdAt: date, title: "Oil")
+        let e2 = MaintenanceEntry(id: "m1", vehicleID: "v1", category: .oilChange, performedAt: date, createdAt: date, title: "Oil")
         let set: Set<MaintenanceEntry> = [e1, e2]
         #expect(set.count == 1)
     }
