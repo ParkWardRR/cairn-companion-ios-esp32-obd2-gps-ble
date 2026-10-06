@@ -129,7 +129,7 @@ The app expects the post-trip disconnect, shows it as "Connecting" with a retry 
 
 ## Getting started
 
-Requires Xcode 16+, an iPhone on iOS 18+ (BLE does not run in the simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen), and a dongle running the [Cairn](https://github.com/ParkWardRR/Cairn) firmware with `CAIRN_BLE_COMPANION`.
+Requires Xcode 16+, an iPhone on iOS 18+ (BLE does not run in the simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen), and a dongle running the [Cairn firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware) with `CAIRN_BLE_COMPANION`.
 
 ```sh
 cd CairnCompanion

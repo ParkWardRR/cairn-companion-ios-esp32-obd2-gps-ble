@@ -17,7 +17,7 @@ On the app side, the link-health UI and the History tab are built, ahead of the 
 
 ## Phase 1 — GPS reinforcement (MVP)
 
-**Firmware** ([Cairn](https://github.com/ParkWardRR/Cairn), behind `CAIRN_BLE_COMPANION`)
+**Firmware** ([cairn-esp32-device-firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware), behind `CAIRN_BLE_COMPANION`)
 
 - [x] `h2zero/NimBLE-Arduino@^2.2.1`, pinned
 - [x] `ble_companion.cpp`: GATT server, authenticated characteristics, static passkey (bond survives reboot, no re-pairing)
