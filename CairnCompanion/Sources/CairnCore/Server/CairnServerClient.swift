@@ -6,17 +6,20 @@ public actor CairnServerClient {
     private let signer: any RequestSigner
     private let tokenStore: any BearerTokenStore
     private let clock: @Sendable () -> Int
+    private let onRevoked: (@Sendable () async -> Void)?
 
     public init(
         transport: any HTTPTransport,
         signer: any RequestSigner,
         tokenStore: any BearerTokenStore = InMemoryBearerTokenStore(),
-        clock: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970) }
+        clock: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970) },
+        onRevoked: (@Sendable () async -> Void)? = nil
     ) {
         self.transport = transport
         self.signer = signer
         self.tokenStore = tokenStore
         self.clock = clock
+        self.onRevoked = onRevoked
     }
 
     // MARK: - Health
@@ -184,6 +187,14 @@ public actor CairnServerClient {
 
     // MARK: - Admin
 
+    public func listClients() async throws -> [ClientEntry] {
+        try await authenticatedJSON(method: "GET", target: "/v1/clients", body: Data())
+    }
+
+    public func listDevices() async throws -> [DeviceEntry] {
+        try await authenticatedJSON(method: "GET", target: "/v1/devices", body: Data())
+    }
+
     public func revokeClient(_ clientID: String, reason: String? = nil) async throws {
         try validateHex(clientID, label: "client_id")
         let target = "/v1/clients/\(clientID)/revoke"
@@ -241,6 +252,9 @@ public actor CairnServerClient {
             throw CairnServerError.transport(.other)
         }
         guard (200...299).contains(response.status) else {
+            if response.status == 401, let onRevoked {
+                await onRevoked()
+            }
             throw classify(response)
         }
         return response

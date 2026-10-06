@@ -30,6 +30,11 @@ public struct SettingsView: View {
     @State private var isEnrolling = false
     @State private var enrolmentError: String?
     @State private var showResetIdentity = false
+    @State private var adminClients: [ClientEntry] = []
+    @State private var adminDevices: [DeviceEntry] = []
+    @State private var isLoadingAdmin = false
+    @State private var revokeTarget: ClientEntry?
+    @State private var showRevokeConfirm = false
 
     public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
         self.session = session
@@ -43,6 +48,9 @@ public struct SettingsView: View {
             Form {
                 if enrolmentService != nil {
                     identitySection
+                }
+                if enrolledIdentity?.isAdmin == true {
+                    adminSection
                 }
                 bluetoothSection
                 serverSection
@@ -259,6 +267,119 @@ public struct SettingsView: View {
             } catch {
                 isEnrolling = false
                 enrolmentError = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Admin
+
+    @ViewBuilder
+    private var adminSection: some View {
+        Section {
+            if isLoadingAdmin {
+                HStack {
+                    ProgressView()
+                    Text("Loading…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else if adminClients.isEmpty {
+                Text("No clients found")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(adminClients) { client in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(client.name ?? String(client.clientID.prefix(12)))
+                                .font(.subheadline.weight(.medium))
+                            HStack(spacing: 8) {
+                                Text(client.role.capitalized)
+                                    .font(.caption)
+                                if client.isRevoked {
+                                    Text("Revoked")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.red)
+                                }
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if !client.isRevoked && client.clientID != enrolledIdentity?.clientID {
+                            Button("Revoke", role: .destructive) {
+                                revokeTarget = client
+                                showRevokeConfirm = true
+                            }
+                            .buttonStyle(.borderless)
+                            .font(.caption)
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(.purple)
+                Text("Administration")
+            }
+        } footer: {
+            Text("Revoking a client disables it on its next request. This cannot be undone.")
+        }
+        .onAppear { loadAdmin() }
+        .confirmationDialog(
+            "Revoke \(revokeTarget?.name ?? "client")?",
+            isPresented: $showRevokeConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Revoke", role: .destructive) {
+                if let target = revokeTarget {
+                    performRevoke(target)
+                }
+            }
+        } message: {
+            Text("This client will be unable to authenticate with the server. This cannot be undone.")
+        }
+    }
+
+    private func loadAdmin() {
+        guard let service = enrolmentService,
+              enrolledIdentity?.isAdmin == true else { return }
+        isLoadingAdmin = true
+        Task {
+            let signer = await service.makeSigner()
+            guard let signer else {
+                isLoadingAdmin = false
+                return
+            }
+            let serverURL = lanURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let baseURL = URL(string: serverURL), !serverURL.isEmpty else {
+                isLoadingAdmin = false
+                return
+            }
+            let transport = URLSessionTransport(baseURL: baseURL)
+            let client = CairnServerClient(transport: transport, signer: signer)
+            do {
+                adminClients = try await client.listClients()
+                isLoadingAdmin = false
+            } catch {
+                isLoadingAdmin = false
+            }
+        }
+    }
+
+    private func performRevoke(_ target: ClientEntry) {
+        guard let service = enrolmentService else { return }
+        Task {
+            let signer = await service.makeSigner()
+            guard let signer else { return }
+            let serverURL = lanURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let baseURL = URL(string: serverURL), !serverURL.isEmpty else { return }
+            let transport = URLSessionTransport(baseURL: baseURL)
+            let client = CairnServerClient(transport: transport, signer: signer)
+            do {
+                try await client.revokeClient(target.clientID, reason: "revoked from app")
+                loadAdmin()
+            } catch {
+                // silently fail — the list will reflect the actual state on reload
             }
         }
     }

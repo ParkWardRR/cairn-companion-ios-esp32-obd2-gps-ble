@@ -282,6 +282,41 @@ public struct RelayReceipt: Sendable, Equatable {
     }
 }
 
+// MARK: - Admin
+
+public struct ClientEntry: Codable, Sendable, Identifiable, Equatable {
+    public var id: String { clientID }
+    public var clientID: String
+    public var name: String?
+    public var role: String
+    public var status: String
+    public var vehicles: [String]?
+    public var lastSeenAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case clientID = "client_id"
+        case name, role, status, vehicles
+        case lastSeenAt = "last_seen_at"
+    }
+
+    public var isRevoked: Bool { status == "revoked" }
+}
+
+public struct DeviceEntry: Codable, Sendable, Identifiable, Equatable {
+    public var id: String { deviceID }
+    public var deviceID: String
+    public var status: String
+    public var lastSeenAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case deviceID = "device_id"
+        case status
+        case lastSeenAt = "last_seen_at"
+    }
+
+    public var isRevoked: Bool { status == "revoked" }
+}
+
 enum ServerTimestamp {
     /// RFC 3339, with or without fractional seconds.
     static func parse(_ string: String) -> Date? {
