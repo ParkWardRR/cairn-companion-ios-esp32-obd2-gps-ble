@@ -26,7 +26,6 @@ struct CairnCompanionApp: App {
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
         self.dataPorter = DataPorter(db: db, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
-        syncClient = TripSyncClient()
 
         let keyProvider: any KeyProvider
         do {
@@ -36,6 +35,7 @@ struct CairnCompanionApp: App {
         }
         let identityStore = KeychainIdentityStore()
         enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
+        syncClient = TripSyncClient(enrolmentService: enrolmentService)
         outboxStore = GRDBOutboxStore(db: db)
         syncStateStore = GRDBSyncStateStore(db: db)
 

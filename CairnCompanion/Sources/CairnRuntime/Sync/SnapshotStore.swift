@@ -35,6 +35,11 @@ actor SnapshotStore {
         guard hasDriveSummary else { return [] }
 
         let hasPosition = (try? conn.query("SELECT 1 FROM position LIMIT 1")) != nil
+        let hasVehicle = hasColumn(conn, table: "drive_summary", column: "vehicle_id")
+        let hasDevice = hasColumn(conn, table: "drive_summary", column: "device_id")
+
+        let vehicleCol = hasVehicle ? "d.vehicle_id" : "NULL::VARCHAR AS vehicle_id"
+        let deviceCol = hasDevice ? "d.device_id" : "NULL::VARCHAR AS device_id"
 
         let sql: String
         if hasPosition {
@@ -53,7 +58,9 @@ actor SnapshotStore {
                     d.warnings,
                     p.observed_at,
                     p.lat,
-                    p.lon
+                    p.lon,
+                    \(vehicleCol),
+                    \(deviceCol)
                 FROM drive_summary d
                 LEFT JOIN (
                     SELECT boot_id, observed_at, lat, lon
@@ -84,7 +91,9 @@ actor SnapshotStore {
                     warnings,
                     NULL::TIMESTAMP AS observed_at,
                     NULL::DOUBLE AS lat,
-                    NULL::DOUBLE AS lon
+                    NULL::DOUBLE AS lon,
+                    \(hasVehicle ? "vehicle_id" : "NULL::VARCHAR AS vehicle_id"),
+                    \(hasDevice ? "device_id" : "NULL::VARCHAR AS device_id")
                 FROM drive_summary
             """
         }
@@ -119,6 +128,8 @@ actor SnapshotStore {
                 warnings: strVal(result, col: 10, row: i),
                 startLat: dblVal(result, col: 12, row: i),
                 startLon: dblVal(result, col: 13, row: i),
+                vehicleID: strVal(result, col: 14, row: i),
+                deviceID: strVal(result, col: 15, row: i),
                 snapshotAt: Foundation.Date()
             ))
         }
@@ -128,6 +139,13 @@ actor SnapshotStore {
     func close() {
         connection = nil
         database = nil
+    }
+
+    // MARK: - Schema helpers
+
+    private nonisolated func hasColumn(_ conn: Connection, table: String, column: String) -> Bool {
+        guard let r = try? conn.query("SELECT \(column) FROM \(table) LIMIT 0") else { return false }
+        return true
     }
 
     // MARK: - Column helpers

@@ -31,7 +31,9 @@ public struct HistoryView: View {
         var result = allEntries
 
         if let vid = filterVehicleID {
-            result = result.filter { $0.phoneSession?.vehicleID == vid }
+            result = result.filter {
+                $0.phoneSession?.vehicleID == vid || $0.serverTrip?.vehicleID == vid
+            }
         }
 
         let calendar = Calendar.current
@@ -232,7 +234,7 @@ public struct HistoryView: View {
         #endif
         .navigationDestination(for: String.self) { id in
             if let entry = allEntries.first(where: { $0.id == id }) {
-                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore) {
+                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore, vehicles: vehicles) {
                     Task { await loadAnnotations() }
                 }
             }
@@ -426,15 +428,17 @@ private struct HistoryRow: View {
 struct DriveDetailView: View {
     let entry: HistoryEntry
     let maintenanceStore: GRDBMaintenanceStore
+    let vehicles: [Vehicle]
     var onAnnotationChange: (() -> Void)?
     @State private var annotations: [Annotation] = []
     @State private var showAddNote = false
     @State private var noteText = ""
     @State private var editingAnnotation: Annotation?
 
-    init(entry: HistoryEntry, maintenanceStore: GRDBMaintenanceStore, onAnnotationChange: (() -> Void)? = nil) {
+    init(entry: HistoryEntry, maintenanceStore: GRDBMaintenanceStore, vehicles: [Vehicle] = [], onAnnotationChange: (() -> Void)? = nil) {
         self.entry = entry
         self.maintenanceStore = maintenanceStore
+        self.vehicles = vehicles
         self.onAnnotationChange = onAnnotationChange
     }
 
@@ -626,15 +630,31 @@ struct DriveDetailView: View {
     @ViewBuilder
     private func serverSection(_ trip: TripSnapshot) -> some View {
         GroupBox("Server Trip") {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                tile("Duration", formatDuration(trip.durationSeconds))
-                if let speed = trip.maxSpeedKph { tile("Max speed", "\(speed) km/h") }
-                if let rpm = trip.maxRpm { tile("Max RPM", "\(rpm)") }
-                tile("OBD samples", "\(trip.obdSamples)")
-                tile("GNSS samples", "\(trip.gnssSamples)")
-                tile("Fix samples", "\(trip.fixSamples)")
-                tile("Phone samples", "\(trip.phoneSamples)")
-                tile("GNSS gaps", "\(trip.gapCount) (\(formatDuration(trip.gnssGapSeconds)))")
+            VStack(alignment: .leading, spacing: 8) {
+                if trip.vehicleID != nil || trip.deviceID != nil {
+                    HStack(spacing: 12) {
+                        if let vid = trip.vehicleID,
+                           let vehicle = vehicles.first(where: { $0.id == vid }) {
+                            Label("\(vehicle.year) \(vehicle.make) \(vehicle.model)", systemImage: "car.fill")
+                                .font(.caption)
+                        }
+                        if let did = trip.deviceID {
+                            Label(String(did.prefix(8)), systemImage: "sensor.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    tile("Duration", formatDuration(trip.durationSeconds))
+                    if let speed = trip.maxSpeedKph { tile("Max speed", "\(speed) km/h") }
+                    if let rpm = trip.maxRpm { tile("Max RPM", "\(rpm)") }
+                    tile("OBD samples", "\(trip.obdSamples)")
+                    tile("GNSS samples", "\(trip.gnssSamples)")
+                    tile("Fix samples", "\(trip.fixSamples)")
+                    tile("Phone samples", "\(trip.phoneSamples)")
+                    tile("GNSS gaps", "\(trip.gapCount) (\(formatDuration(trip.gnssGapSeconds)))")
+                }
             }
             .padding(.top, 4)
         }

@@ -22,6 +22,9 @@ public struct TripSnapshot: Codable, Identifiable, Sendable, Equatable {
     public var startLat: Double?
     public var startLon: Double?
 
+    public var vehicleID: String?
+    public var deviceID: String?
+
     /// When this snapshot was exported by the server.
     public var snapshotAt: Date
 
@@ -34,6 +37,7 @@ public struct TripSnapshot: Codable, Identifiable, Sendable, Equatable {
         gapCount: Int = 0, gapDurationMs: Int = 0,
         warnings: String? = nil,
         startLat: Double? = nil, startLon: Double? = nil,
+        vehicleID: String? = nil, deviceID: String? = nil,
         snapshotAt: Date = Date()
     ) {
         self.id = id
@@ -51,6 +55,8 @@ public struct TripSnapshot: Codable, Identifiable, Sendable, Equatable {
         self.warnings = warnings
         self.startLat = startLat
         self.startLon = startLon
+        self.vehicleID = vehicleID
+        self.deviceID = deviceID
         self.snapshotAt = snapshotAt
     }
 

@@ -51,13 +51,15 @@ public final class TripSyncClient {
 
     private let store = SnapshotStore()
     private var cachedSnapshots: [TripSnapshot] = []
+    private let enrolmentService: EnrolmentService?
 
     private var snapshotDir: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return support.appendingPathComponent("snapshot", isDirectory: true)
     }
 
-    public init() {
+    public init(enrolmentService: EnrolmentService? = nil) {
+        self.enrolmentService = enrolmentService
         lastSyncAt = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date
         if let data = UserDefaults.standard.data(forKey: Self.manifestKey) {
             manifest = try? JSONDecoder().decode(SnapshotManifest.self, from: data)
@@ -232,14 +234,23 @@ public final class TripSyncClient {
             return
         }
 
+        let signer = await enrolmentService?.makeSigner()
+
         do {
-            var components = URLComponents(url: baseURL.appendingPathComponent("api/snapshot"), resolvingAgainstBaseURL: false)!
+            let path = signer != nil ? "v1/snapshot" : "api/snapshot"
+            var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
             components.queryItems = [URLQueryItem(name: "format", value: "tar")]
             var request = URLRequest(url: components.url!)
             request.timeoutInterval = 30
 
             if let etag = UserDefaults.standard.string(forKey: Self.etagKey) {
                 request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+            }
+
+            if let signer {
+                let target = "/\(path)?format=tar"
+                let auth = Self.signRequest(method: "GET", target: target, body: Data(), signer: signer)
+                request.setValue(auth, forHTTPHeaderField: "Authorization")
             }
 
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -282,6 +293,22 @@ public final class TripSyncClient {
             state = .failed(error.localizedDescription)
             Self.log.error("sync failed: \(error)")
         }
+    }
+
+    private static func signRequest(
+        method: String, target: String, body: Data, signer: any RequestSigner
+    ) -> String {
+        let ts = Int(Date().timeIntervalSince1970)
+        let nonce = SigningString.freshNonce()
+        let bodyHash = SigningString.bodyHash(body)
+        let signingData = SigningString.build(
+            method: method, target: target, timestamp: ts,
+            nonce: nonce, bodyHash: bodyHash, clientID: signer.clientID
+        )
+        guard let signatureDER = try? signer.sign(signingData) else { return "" }
+        return SigningString.authorizationHeader(
+            clientID: signer.clientID, timestamp: ts, nonce: nonce, signatureDER: signatureDER
+        )
     }
 
     public var isStale: Bool {
