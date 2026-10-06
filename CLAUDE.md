@@ -6,7 +6,7 @@ BLE companion app for the Cairn ESP32 OBD-II/GPS logger dongle.
 
 ```bash
 cd CairnCompanion && swift build   # macOS debug build
-cd CairnCompanion && swift test    # 134 tests, all CairnCore (run scripts/fetch-contracts.sh first)
+cd CairnCompanion && swift test    # 163 tests, all CairnCore (run scripts/fetch-contracts.sh first)
 ```
 
 For iOS builds, use Xcode (`CairnCompanion/CairnCompanion.xcodeproj`).
