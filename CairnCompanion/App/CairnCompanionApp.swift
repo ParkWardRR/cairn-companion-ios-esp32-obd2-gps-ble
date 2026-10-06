@@ -1,3 +1,4 @@
+import CairnCore
 import CairnRuntime
 import SwiftUI
 
@@ -8,6 +9,7 @@ struct CairnCompanionApp: App {
     private let maintenanceStore: GRDBMaintenanceStore
     private let syncClient: TripSyncClient
     private let dataPorter: DataPorter
+    private let enrolmentService: EnrolmentService
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -23,6 +25,16 @@ struct CairnCompanionApp: App {
         self.maintenanceStore = maintenanceStore
         self.dataPorter = DataPorter(db: db, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
         syncClient = TripSyncClient()
+
+        let keyProvider: any KeyProvider
+        do {
+            keyProvider = try SecureEnclaveKeyProvider()
+        } catch {
+            keyProvider = SoftwareKeyProvider()
+        }
+        let identityStore = KeychainIdentityStore()
+        enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
+
         #if DEBUG
         if let scenario = DemoMode.scenario {
             DemoMode.apply(scenario, to: state)
@@ -39,17 +51,17 @@ struct CairnCompanionApp: App {
             #if DEBUG
             if let scale = DemoMode.scale {
                 GeometryReader { proxy in
-                    RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
+                    RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService)
                         .frame(width: proxy.size.width / scale, height: proxy.size.height / scale)
                         .scaleEffect(scale, anchor: .top)
                         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
                 .ignoresSafeArea(edges: .bottom)
             } else {
-                RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
+                RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService)
             }
             #else
-            RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
+            RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService)
             #endif
         }
         .onChange(of: scenePhase) { _, phase in

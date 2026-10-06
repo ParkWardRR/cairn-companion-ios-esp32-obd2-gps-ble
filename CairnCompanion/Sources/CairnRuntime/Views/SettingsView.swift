@@ -6,6 +6,7 @@ public struct SettingsView: View {
     let session: DrivingSession
     let syncClient: TripSyncClient
     let dataPorter: DataPorter
+    let enrolmentService: EnrolmentService?
     @State private var lanURL: String = ""
     @State private var tailnetURL: String = ""
     @State private var showDeleteConfirm = false
@@ -23,16 +24,26 @@ public struct SettingsView: View {
     @State private var dataError: String?
     @State private var isExporting = false
     @State private var isImporting = false
+    @State private var enrolmentState: EnrolmentState = .notEnrolled
+    @State private var enrolledIdentity: EnrolledIdentity?
+    @State private var invitationCode: String = ""
+    @State private var isEnrolling = false
+    @State private var enrolmentError: String?
+    @State private var showResetIdentity = false
 
-    public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter) {
+    public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
         self.session = session
         self.syncClient = syncClient
         self.dataPorter = dataPorter
+        self.enrolmentService = enrolmentService
     }
 
     public var body: some View {
         NavigationStack {
             Form {
+                if enrolmentService != nil {
+                    identitySection
+                }
                 bluetoothSection
                 serverSection
                 if syncClient.hasServer {
@@ -47,6 +58,7 @@ public struct SettingsView: View {
             .onAppear {
                 lanURL = syncClient.lanURL
                 tailnetURL = syncClient.tailnetURL
+                loadEnrolmentState()
             }
             .alert("Export", isPresented: $showExportSheet) {
                 SecureField("Passphrase", text: $exportPassphrase)
@@ -90,6 +102,164 @@ public struct SettingsView: View {
                 }
             }
             #endif
+        }
+    }
+
+    // MARK: - Identity
+
+    @ViewBuilder
+    private var identitySection: some View {
+        switch enrolmentState {
+        case .enrolled:
+            Section {
+                if let identity = enrolledIdentity {
+                    LabeledContent("Client ID") {
+                        Text(String(identity.clientID.prefix(12)) + "...")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+                    LabeledContent("Role") {
+                        Text(identity.role.capitalized)
+                            .font(.subheadline.weight(.medium))
+                    }
+                    LabeledContent("Instance") {
+                        Text(String(identity.instanceID.prefix(8)) + "...")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                    Text("Identity")
+                }
+            } footer: {
+                Text("This device is enrolled with the Cairn server. The Secure Enclave key proves identity on every request.")
+            }
+
+        case .notEnrolled, .enrolling:
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Enter the invitation code from your server admin to enrol this device.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Invitation code", text: $invitationCode)
+                        .font(.body.monospaced())
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                }
+
+                Button {
+                    performEnrolment()
+                } label: {
+                    HStack {
+                        Text("Enrol Device")
+                        Spacer()
+                        if isEnrolling {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(invitationCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isEnrolling)
+
+                if let error = enrolmentError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                        .font(.caption)
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    Image(systemName: "key.fill")
+                        .foregroundStyle(.orange)
+                    Text("Identity")
+                }
+            }
+
+        case .revoked:
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.shield.fill")
+                        .font(.title2)
+                        .foregroundStyle(.red)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Identity Revoked")
+                            .font(.subheadline.weight(.semibold))
+                        Text("This device's enrolment has been revoked by the server. Reset identity to re-enrol with a new invitation code.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Button("Reset Identity", role: .destructive) {
+                    showResetIdentity = true
+                }
+            } header: {
+                Text("Identity")
+            }
+        }
+    }
+
+    private func loadEnrolmentState() {
+        guard let service = enrolmentService else { return }
+        Task {
+            let (state, identity) = await service.loadIdentity()
+            enrolmentState = state
+            enrolledIdentity = identity
+        }
+    }
+
+    private func performEnrolment() {
+        guard let service = enrolmentService else { return }
+        let code = invitationCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+
+        let serverURL = lanURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let baseURL = URL(string: serverURL), !serverURL.isEmpty else {
+            enrolmentError = "Enter a server URL first"
+            return
+        }
+
+        isEnrolling = true
+        enrolmentError = nil
+
+        Task {
+            do {
+                let transport = URLSessionTransport(baseURL: baseURL)
+                let placeholder = PlaceholderSigner()
+                let client = CairnServerClient(transport: transport, signer: placeholder)
+                #if os(iOS)
+                let deviceName = UIDevice.current.name
+                #else
+                let deviceName = Host.current().localizedName ?? "Mac"
+                #endif
+                let identity = try await service.enrol(
+                    code: code,
+                    deviceName: deviceName,
+                    using: client,
+                    localBaseURL: lanURL,
+                    tailnetBaseURL: tailnetURL
+                )
+                enrolmentState = .enrolled
+                enrolledIdentity = identity
+                invitationCode = ""
+                isEnrolling = false
+            } catch let error as CairnServerError {
+                isEnrolling = false
+                switch error {
+                case .forbidden(.enrolmentRefused):
+                    enrolmentError = "Invitation code is invalid or has been used"
+                case .unauthenticated:
+                    enrolmentError = "Enrolment proof was rejected by the server"
+                default:
+                    enrolmentError = "Server error: \(error.errorCode ?? "unknown")"
+                }
+            } catch {
+                isEnrolling = false
+                enrolmentError = error.localizedDescription
+            }
         }
     }
 
@@ -461,6 +631,21 @@ public struct SettingsView: View {
                 Label("Forget Dongle", systemImage: "minus.circle")
                     .foregroundStyle(.red)
             }
+
+            if enrolmentService != nil && enrolmentState == .enrolled {
+                Button(role: .destructive) {
+                    showResetIdentity = true
+                } label: {
+                    Label("Reset Identity", systemImage: "person.crop.circle.badge.minus")
+                }
+                .confirmationDialog("Reset device identity?", isPresented: $showResetIdentity) {
+                    Button("Reset Identity", role: .destructive) {
+                        resetIdentity()
+                    }
+                } message: {
+                    Text("This deletes the Secure Enclave key and enrolment. You will need a new invitation code to re-enrol.")
+                }
+            }
         } header: {
             Text("Danger Zone")
         }
@@ -474,9 +659,26 @@ public struct SettingsView: View {
         syncClient.tailnetURL = tailnetURL.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func resetIdentity() {
+        guard let service = enrolmentService else { return }
+        Task {
+            try? await service.reset()
+            enrolmentState = .notEnrolled
+            enrolledIdentity = nil
+        }
+    }
+
     private func formattedCount(_ n: Int) -> String {
         if n < 1000 { return "\(n)" }
         return String(format: "%.1fk", Double(n) / 1000)
+    }
+}
+
+private struct PlaceholderSigner: RequestSigner, Sendable {
+    let clientID = ""
+    let publicKeyX963 = Data()
+    func sign(_ data: Data) throws -> Data {
+        throw CairnServerError.signingFailed
     }
 }
 

@@ -2,21 +2,20 @@ import CairnCore
 import CryptoKit
 import Foundation
 
-final class SecureEnclaveIdentity: RequestSigner, @unchecked Sendable {
+public final class SecureEnclaveKeyProvider: KeyProvider, @unchecked Sendable {
+    private static let tag = "app.cairn.companion.identity"
     private let privateKey: SecureEnclave.P256.Signing.PrivateKey
-    let clientID: String
 
-    var publicKeyX963: Data {
+    public var publicKeyX963: Data {
         Data(privateKey.publicKey.x963Representation)
     }
 
-    var publicKeyHex: String {
+    public var publicKeyHex: String {
         publicKeyX963.map { String(format: "%02x", $0) }.joined()
     }
 
-    init(clientID: String) throws {
-        let tag = "app.cairn.companion.identity"
-        if let existing = try Self.loadFromKeychain(tag: tag) {
+    public init() throws {
+        if let existing = try Self.loadFromKeychain(tag: Self.tag) {
             self.privateKey = existing
         } else {
             self.privateKey = try SecureEnclave.P256.Signing.PrivateKey(
@@ -27,20 +26,18 @@ final class SecureEnclaveIdentity: RequestSigner, @unchecked Sendable {
                     nil
                 )!
             )
-            try Self.saveToKeychain(privateKey, tag: tag)
+            try Self.saveToKeychain(privateKey, tag: Self.tag)
         }
-        self.clientID = clientID
     }
 
-    func sign(_ data: Data) throws -> Data {
-        let signature = try privateKey.signature(for: data)
-        return signature.derRepresentation
+    public func sign(_ data: Data) throws -> Data {
+        try privateKey.signature(for: data).derRepresentation
     }
 
-    func deleteKey() throws {
+    public func deleteKey() throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: "app.cairn.companion.identity",
+            kSecAttrApplicationTag as String: Self.tag,
         ]
         SecItemDelete(query as CFDictionary)
     }

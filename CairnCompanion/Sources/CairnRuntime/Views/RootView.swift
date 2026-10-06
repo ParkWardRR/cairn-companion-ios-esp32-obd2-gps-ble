@@ -9,14 +9,16 @@ public struct RootView: View {
     private let maintenanceStore: GRDBMaintenanceStore
     private let syncClient: TripSyncClient
     private let dataPorter: DataPorter
+    private let enrolmentService: EnrolmentService?
     @State private var showWelcome: Bool
 
-    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient, dataPorter: DataPorter) {
+    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
         self.session = session
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
         self.syncClient = syncClient
         self.dataPorter = dataPorter
+        self.enrolmentService = enrolmentService
         _showWelcome = State(initialValue: !UserDefaults.standard.bool(forKey: Self.hasSeenWelcomeKey))
     }
 
@@ -34,7 +36,7 @@ public struct RootView: View {
                     .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
                 GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, recorder: session.recorder)
                     .tabItem { Label("Garage", systemImage: "building.2") }
-                SettingsView(session: session, syncClient: syncClient, dataPorter: dataPorter)
+                SettingsView(session: session, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService)
                     .tabItem { Label("Settings", systemImage: "gear") }
             }
         }
