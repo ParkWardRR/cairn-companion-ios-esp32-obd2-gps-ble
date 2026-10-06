@@ -33,6 +33,7 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                bluetoothSection
                 serverSection
                 if syncClient.hasServer {
                     diagnosticsSection
@@ -89,6 +90,30 @@ public struct SettingsView: View {
                 }
             }
             #endif
+        }
+    }
+
+    // MARK: - Bluetooth
+
+    @ViewBuilder
+    private var bluetoothSection: some View {
+        Section {
+            NavigationLink {
+                BluetoothSettingsView(session: session)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.body)
+                        .foregroundStyle(.blue)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Bluetooth")
+                            .font(.body)
+                        Text(session.state.stage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
     }
 
