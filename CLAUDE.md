@@ -40,9 +40,11 @@ SPM multi-target inside `CairnCompanion/`:
 
 ## Plan
 
-See `ui-ux-overhaul.md` for the full UI/UX overhaul roadmap (Phases A-F). Phase A (tab restructure) is complete. Phases B and C are next and independent of each other.
+See `ui-ux-overhaul.md` for the full UI/UX overhaul roadmap (Phases A-F). Phases A, B, and C are complete. Phases D-F are blocked on server-side work.
 
 ## Related repos
 
-- Firmware + server: `ParkWardRR/Cairn` (ESP32 firmware, server issues for enrolment/sync/revocation)
-- Old iOS repo (superseded): `ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble`
+- Front door + roadmap: `ParkWardRR/cairn-driving-log-selfhosted`
+- Server: `ParkWardRR/cairn-vehicle-server` (enrolment, sync, revocation APIs)
+- Firmware: `ParkWardRR/cairn-esp32-device-firmware`
+- Web dashboard: `ParkWardRR/cairn-vehicle-web-dashboard`
