@@ -6,6 +6,7 @@ public struct SettingsView: View {
     let syncClient: TripSyncClient
     @State private var serverURL: String = ""
     @State private var showDeleteConfirm = false
+    @State private var showServerSetup = false
 
     public init(session: DrivingSession, syncClient: TripSyncClient) {
         self.session = session
@@ -16,7 +17,10 @@ public struct SettingsView: View {
         NavigationStack {
             Form {
                 serverSection
-                syncStatusSection
+                if syncClient.hasServer {
+                    syncStatusSection
+                }
+                aboutSection
                 dangerZone
             }
             .navigationTitle("Settings")
@@ -30,33 +34,61 @@ public struct SettingsView: View {
 
     @ViewBuilder
     private var serverSection: some View {
-        Section {
-            TextField("https://your-cairn-server", text: $serverURL)
-                .textContentType(.URL)
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                .keyboardType(.URL)
-                #endif
-                .onSubmit { saveURL() }
-                .onChange(of: serverURL) { _, _ in saveURL() }
+        if syncClient.hasServer || showServerSetup {
+            Section {
+                TextField("https://cairn.example.lan", text: $serverURL)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+                    .onSubmit { saveURL() }
+                    .onChange(of: serverURL) { _, _ in saveURL() }
 
-            Button {
-                syncClient.sync()
-            } label: {
-                HStack {
-                    Text("Sync Now")
-                    Spacer()
-                    if syncClient.state == .syncing {
-                        ProgressView()
+                if syncClient.hasServer {
+                    Button {
+                        syncClient.sync()
+                    } label: {
+                        HStack {
+                            Text("Sync Now")
+                            Spacer()
+                            if syncClient.state == .syncing {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(syncClient.state == .syncing)
+                }
+            } header: {
+                Text("Cairn Server")
+            } footer: {
+                Text("Optional. Connect to your Cairn server to sync trip data. The app works fully offline without a server.")
+            }
+        } else {
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Standalone Mode")
+                            .font(.subheadline.weight(.semibold))
+                        Text("All features work offline. Connect a server to sync trip data.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(.vertical, 4)
+
+                Button {
+                    showServerSetup = true
+                } label: {
+                    Label("Connect to Server", systemImage: "link")
+                }
+            } header: {
+                Text("Server")
             }
-            .disabled(serverURL.isEmpty || syncClient.state == .syncing)
-        } header: {
-            Text("Cairn Server")
-        } footer: {
-            Text("The URL of your Cairn server. The app downloads a snapshot of your trip data for offline browsing.")
         }
     }
 
@@ -97,6 +129,23 @@ public struct SettingsView: View {
             }
         }
     }
+
+    // MARK: - About
+
+    @ViewBuilder
+    private var aboutSection: some View {
+        Section("About") {
+            LabeledContent("App", value: "Cairn Companion")
+            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                LabeledContent("Version", value: version)
+            }
+            if let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+                LabeledContent("Build", value: build)
+            }
+        }
+    }
+
+    // MARK: - Danger Zone
 
     @ViewBuilder
     private var dangerZone: some View {

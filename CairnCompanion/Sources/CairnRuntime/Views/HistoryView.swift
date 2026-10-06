@@ -95,8 +95,10 @@ public struct HistoryView: View {
             .navigationTitle("History")
             .searchable(text: $searchText, prompt: "Search notes")
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    syncButton
+                if syncClient.hasServer {
+                    ToolbarItem(placement: .automatic) {
+                        syncButton
+                    }
                 }
             }
             .task { await load() }
