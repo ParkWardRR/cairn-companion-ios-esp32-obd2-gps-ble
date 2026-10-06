@@ -10,6 +10,8 @@ struct CairnCompanionApp: App {
     private let syncClient: TripSyncClient
     private let dataPorter: DataPorter
     private let enrolmentService: EnrolmentService
+    private let outboxStore: GRDBOutboxStore
+    private let syncStateStore: GRDBSyncStateStore
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -34,6 +36,8 @@ struct CairnCompanionApp: App {
         }
         let identityStore = KeychainIdentityStore()
         enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
+        outboxStore = GRDBOutboxStore(db: db)
+        syncStateStore = GRDBSyncStateStore(db: db)
 
         #if DEBUG
         if let scenario = DemoMode.scenario {
