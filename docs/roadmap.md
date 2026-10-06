@@ -2,7 +2,7 @@
 
 Checkboxes are the Phase 1 work items from the plan. The iOS app is built and runs against the dongle; the firmware is flashed and running on hardware. Phase 1 stays open until every row of [validation.md](validation.md) passes.
 
-Firmware items are checked only where the firmware repo reports them done ([HANDOFF-FIRMWARE.md](../HANDOFF-FIRMWARE.md), response of 2026-10-03). Rows marked *host-tested* are covered by firmware host tests or docs, not yet by a drive. The [Cairn](https://github.com/ParkWardRR/Cairn) repo is the source of truth for the rest.
+Firmware items are checked only where the firmware repo reports them done ([HANDOFF-FIRMWARE.md](../HANDOFF-FIRMWARE.md), response of 2026-10-03). Rows marked *host-tested* are covered by firmware host tests or docs, not yet by a drive. The [Cairn](https://github.com/ParkWardRR/cairn-driving-log-selfhosted) repo is the source of truth for the rest.
 
 ## Current focus
 
@@ -17,7 +17,7 @@ On the app side, the link-health UI and the History tab are built, ahead of the 
 
 ## Phase 1 — GPS reinforcement (MVP)
 
-**Firmware** ([Cairn](https://github.com/ParkWardRR/Cairn), behind `CAIRN_BLE_COMPANION`)
+**Firmware** ([cairn-esp32-device-firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware), behind `CAIRN_BLE_COMPANION`)
 
 - [x] `h2zero/NimBLE-Arduino@^2.2.1`, pinned
 - [x] `ble_companion.cpp`: GATT server, authenticated characteristics, static passkey (bond survives reboot, no re-pairing)

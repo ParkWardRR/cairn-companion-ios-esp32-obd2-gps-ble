@@ -1,6 +1,6 @@
-# Firmware changes (Cairn repo)
+# Firmware changes (firmware repo)
 
-All changes land in [ParkWardRR/Cairn](https://github.com/ParkWardRR/Cairn) under `firmware/cairn-v2/`. Behind `CAIRN_BLE_COMPANION` (default 0).
+All changes land in [ParkWardRR/cairn-esp32-device-firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware) (this was `firmware/cairn-v2/` before the repositories were split). Behind `CAIRN_BLE_COMPANION` (default 0).
 
 ## Why the internal GNSS is bad
 

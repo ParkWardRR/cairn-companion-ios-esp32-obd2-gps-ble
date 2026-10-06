@@ -15,11 +15,11 @@
 ![OBD-II](https://img.shields.io/badge/OBD--II-Freematics%20ONE%2B-lightgrey)
 ![CoreLocation](https://img.shields.io/badge/CoreLocation-liveUpdates-34C759)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
-![Last commit](https://img.shields.io/github/last-commit/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble)
-![Stars](https://img.shields.io/github/stars/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble?style=flat)
-![Issues](https://img.shields.io/github/issues/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble)
+![Last commit](https://img.shields.io/github/last-commit/ParkWardRR/cairn-ios-companion-app)
+![Stars](https://img.shields.io/github/stars/ParkWardRR/cairn-ios-companion-app?style=flat)
+![Issues](https://img.shields.io/github/issues/ParkWardRR/cairn-ios-companion-app)
 
-An OBD-II port under the dash has almost no sky view. Cairn Companion turns the phone already on your windshield into the dongle's GPS: it forwards Core Location fixes, with per-fix accuracy, over an encrypted BLE link, and shows you whether the dongle actually accepted them. Companion to [Cairn](https://github.com/ParkWardRR/Cairn).
+An OBD-II port under the dash has almost no sky view. Cairn Companion turns the phone already on your windshield into the dongle's GPS: it forwards Core Location fixes, with per-fix accuracy, over an encrypted BLE link, and shows you whether the dongle actually accepted them. Companion to [Cairn](https://github.com/ParkWardRR/cairn-driving-log-selfhosted).
 
 <p align="center">
   <img src="docs/images/streaming-light.png" width="270" alt="Cairn Companion streaming to the dongle, light mode">
@@ -129,7 +129,7 @@ The app expects the post-trip disconnect, shows it as "Connecting" with a retry 
 
 ## Getting started
 
-Requires Xcode 16+, an iPhone on iOS 18+ (BLE does not run in the simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen), and a dongle running the [Cairn](https://github.com/ParkWardRR/Cairn) firmware with `CAIRN_BLE_COMPANION`.
+Requires Xcode 16+, an iPhone on iOS 18+ (BLE does not run in the simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen), and a dongle running the [Cairn firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware) with `CAIRN_BLE_COMPANION`.
 
 ```sh
 cd CairnCompanion
@@ -166,7 +166,7 @@ xcrun simctl io booted screenshot docs/images/streaming-light.png
 | **1 — GPS reinforcement (MVP)** | iOS app + firmware: `GNSS_FIX`, `GNSS_QUALITY`, `COMPANION_STATUS`, bonding, dual recording, source-aware lifecycle, locked-screen session, DB compatibility | 🚧 running on hardware; validation in progress |
 | **2 — Enrichment** | Barometric altitude, phone UTC, compass heading, OBD + trip state notify, live dashboard | 🚧 app side built for `BARO_ALT`, `UTC_SYNC`, `OBD_LIVE`, `DEVICE_STATUS`; waiting on firmware |
 | **3 — Trips and history** | Local drive history, trip snapshot sync from your server, internal-vs-phone accuracy analysis, decide whether to power down internal GNSS when phone is connected | 🚧 history and snapshot sync built; not yet verified against a real server |
-| **v3 — Authenticated sync and multi-vehicle** | Secure Enclave identity, per-request signing, vehicle-scoped data, durable outbox, LAN/Tailnet endpoint selection, BLE session auth | planned; see [v3 tracking issue](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/13) |
+| **v3 — Authenticated sync and multi-vehicle** | Secure Enclave identity, per-request signing, vehicle-scoped data, durable outbox, LAN/Tailnet endpoint selection, BLE session auth | planned; see [v3 tracking issue](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/13) |
 
 Phase 1 exit criteria are the [validation matrix](docs/validation.md): security, stale/invalid handling, drive tests, DB compatibility, and measured RAM / stack / battery / write-rate. Per-item checklists live in [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -182,7 +182,7 @@ Phase 1 exit criteria are the [validation matrix](docs/validation.md): security,
 | [`docs/decisions.md`](docs/decisions.md) | Decisions, design-review changes, open questions |
 | [`docs/plan-link-health-and-history.md`](docs/plan-link-health-and-history.md) | Link-health UI and History tab plan |
 | [`HANDOFF-FIRMWARE.md`](HANDOFF-FIRMWARE.md) | Firmware work list and the firmware repo's response |
-| [v3 tracking issue](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/13) | v3 authenticated sync and multi-vehicle |
+| [v3 tracking issue](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/13) | v3 authenticated sync and multi-vehicle |
 | [`docs/full-plan.md`](docs/full-plan.md) | Complete original plan document |
 
 ## Contributing

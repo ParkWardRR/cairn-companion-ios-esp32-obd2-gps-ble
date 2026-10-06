@@ -1,6 +1,6 @@
 # Handoff: firmware agent
 
-You are picking up the **firmware side** of the Cairn phone-GNSS companion in [ParkWardRR/Cairn](https://github.com/ParkWardRR/Cairn) (`firmware/cairn-v2/`, behind `CAIRN_BLE_COMPANION`). This repo is the iOS app. It is built and runs against your dongle. Your job is to close the firmware rows and make the two sides agree on the wire.
+You are picking up the **firmware side** of the Cairn phone-GNSS companion in [ParkWardRR/cairn-esp32-device-firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware) (behind `CAIRN_BLE_COMPANION`). This repo is the iOS app. It is built and runs against your dongle. Your job is to close the firmware rows and make the two sides agree on the wire.
 
 Last updated against iOS commit state of 2026-10-03.
 
@@ -147,7 +147,7 @@ Nothing has run against real firmware or a device yet. Treat the first end-to-en
 
 ## v3 — BLE session authentication (future)
 
-Issue [#9](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/9) adds challenge-response authentication to BLE sessions. This work is **blocked on firmware Phase 22** and is listed here so the firmware side can plan for it.
+Issue [#9](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/9) adds challenge-response authentication to BLE sessions. This work is **blocked on firmware Phase 22** and is listed here so the firmware side can plan for it.
 
 ### What changes on the wire
 
