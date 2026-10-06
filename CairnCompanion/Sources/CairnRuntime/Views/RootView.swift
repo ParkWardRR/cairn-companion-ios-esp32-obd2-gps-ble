@@ -17,10 +17,12 @@ public struct RootView: View {
     public var body: some View {
         TabView {
             MainView(session: session)
-                .tabItem { Label("Live", systemImage: "location.fill") }
+                .tabItem { Label("Drive", systemImage: "location.fill") }
             HistoryView(recorder: session.recorder, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            SettingsView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
+            GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
+                .tabItem { Label("Garage", systemImage: "building.2") }
+            SettingsView(session: session, syncClient: syncClient)
                 .tabItem { Label("Settings", systemImage: "gear") }
         }
     }
