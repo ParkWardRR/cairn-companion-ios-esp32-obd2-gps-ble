@@ -2,7 +2,7 @@
 
 Checkboxes are the Phase 1 work items from the plan. The iOS app is built and runs against the dongle; the firmware is flashed and running on hardware. Phase 1 stays open until every row of [validation.md](validation.md) passes.
 
-Firmware items are checked only where the firmware repo reports them done ([HANDOFF-FIRMWARE.md](../HANDOFF-FIRMWARE.md), response of 2026-10-03). Rows marked *host-tested* are covered by firmware host tests or docs, not yet by a drive. The [Cairn](https://github.com/ParkWardRR/Cairn) repo is the source of truth for the rest.
+Firmware items are checked only where the firmware repo reports them done ([HANDOFF-FIRMWARE.md](../HANDOFF-FIRMWARE.md), response of 2026-10-03). Rows marked *host-tested* are covered by firmware host tests or docs, not yet by a drive. The [Cairn](https://github.com/ParkWardRR/cairn-driving-log-selfhosted) repo is the source of truth for the rest.
 
 ## Current focus
 

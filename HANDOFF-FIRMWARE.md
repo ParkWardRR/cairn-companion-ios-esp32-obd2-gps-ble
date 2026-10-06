@@ -147,7 +147,7 @@ Nothing has run against real firmware or a device yet. Treat the first end-to-en
 
 ## v3 — BLE session authentication (future)
 
-Issue [#9](https://github.com/ParkWardRR/cairn-companion-ios-esp32-obd2-gps-ble/issues/9) adds challenge-response authentication to BLE sessions. This work is **blocked on firmware Phase 22** and is listed here so the firmware side can plan for it.
+Issue [#9](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/9) adds challenge-response authentication to BLE sessions. This work is **blocked on firmware Phase 22** and is listed here so the firmware side can plan for it.
 
 ### What changes on the wire
 
