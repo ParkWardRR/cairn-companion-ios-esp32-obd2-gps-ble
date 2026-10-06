@@ -165,16 +165,18 @@ Where each open companion issue lands in the new UI:
 
 **Goal**: Move from 3 tabs to 4 without adding new features. Pure reorganization.
 
+**Status**: COMPLETE (commit b8f906f, 2026-10-05)
+
 **Scope**:
-- [ ] Create `GarageView` — vehicle list as cards, push to `VehicleProfileView`
-- [ ] Create `VehicleProfileView` — identity, maintenance timeline, odometer
-- [ ] Move vehicle section from `SettingsView` → `GarageView`
-- [ ] Move maintenance section from `SettingsView` → `VehicleProfileView`
-- [ ] Add vehicle picker chip to `MainView` header
-- [ ] Update `RootView` tab bar: Drive, History, Garage, Settings
-- [ ] Clean up `SettingsView` — only server, sync, danger zone remain
-- [ ] Update store/dependency wiring through new views
-- [ ] Verify all existing tests still pass
+- [x] Create `GarageView` — vehicle list as cards, push to `VehicleProfileView`
+- [x] Create `VehicleProfileView` — identity, maintenance timeline, odometer
+- [x] Move vehicle section from `SettingsView` → `GarageView`
+- [x] Move maintenance section from `SettingsView` → `VehicleProfileView`
+- [ ] Add vehicle picker chip to `MainView` header (deferred to Phase B)
+- [x] Update `RootView` tab bar: Drive, History, Garage, Settings
+- [x] Clean up `SettingsView` — only server, sync, danger zone remain
+- [x] Update store/dependency wiring through new views
+- [x] Verify all existing tests still pass
 
 **Estimated size**: ~400 lines new, ~200 lines moved, 0 new models
 
