@@ -98,3 +98,7 @@ Suggested order: #12 → #1 → #2 → #3 + #4 → #5 → #6 → #7 → #10 → 
 - [ ] #9 BLE session authentication (blocked on firmware Phase 22)
 - [ ] #10 Revocation state, identity reset, admin actions
 - [ ] #11 Privacy and log hygiene audit
+
+## CarPlay
+
+**Decision: widgets and Live Activities, not CarPlay.** The CarPlay entitlement requires Apple approval for a specific app category; an OBD logger does not fit any. Widgets and Live Activities deliver the same driver-facing value on the Lock Screen and in StandBy mode without an entitlement gate. See [carplay-design.md](carplay-design.md) for the full analysis.
