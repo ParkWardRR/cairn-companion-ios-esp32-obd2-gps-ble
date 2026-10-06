@@ -63,6 +63,13 @@ public final class GRDBVehicleStore: VehicleStore, Sendable {
         }
     }
 
+    public func unassign(dongleID: String) async throws {
+        try await db.dbPool.write { dbConn in
+            try dbConn.execute(sql: "DELETE FROM vehicleAssignment WHERE dongleID = ?",
+                               arguments: [dongleID])
+        }
+    }
+
     public nonisolated func vehicleID(forDongle dongleID: String) -> String? {
         try? db.dbPool.read { dbConn in
             try String.fetchOne(dbConn, sql: """

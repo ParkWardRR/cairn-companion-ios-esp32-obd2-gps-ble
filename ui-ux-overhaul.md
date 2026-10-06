@@ -9,8 +9,8 @@ planStatus:
   stakeholders: []
   tags: [ios, ui-ux, cairn-v3, restructure]
   created: "2026-10-05"
-  updated: "2026-10-05T22:50:00.000Z"
-  progress: 0
+  updated: "2026-10-05T23:59:00.000Z"
+  progress: 50
 ---
 
 # Cairn Companion — UI/UX Overhaul & Forward Plan
@@ -184,13 +184,15 @@ Where each open companion issue lands in the new UI:
 
 **Goal**: Make the Garage tab a proper vehicle management hub.
 
+**Status**: COMPLETE (2026-10-05)
+
 **Scope**:
-- [ ] Dongle assignment UI in vehicle profile (assign/unassign)
-- [ ] Odometer history chart (line chart of corrections over time)
-- [ ] Per-vehicle drive stats (total drives, last drive, quality breakdown)
-- [ ] Full maintenance timeline with date grouping
-- [ ] Maintenance detail view (tap a row to see notes, cost, parts)
-- [ ] Edit vehicle in-place (tap fields to modify)
+- [x] Dongle assignment UI in vehicle profile (assign/unassign)
+- [x] Odometer history chart (line chart of corrections over time)
+- [x] Per-vehicle drive stats (total drives, last drive, quality breakdown)
+- [x] Full maintenance timeline with date grouping
+- [x] Maintenance detail view (tap a row to see notes, cost, parts)
+- [x] Edit vehicle in-place (tap fields to modify)
 
 **Estimated size**: ~600 lines new
 
@@ -198,13 +200,15 @@ Where each open companion issue lands in the new UI:
 
 **Goal**: Make drive history searchable and filterable.
 
+**Status**: COMPLETE (2026-10-05)
+
 **Scope**:
-- [ ] Vehicle filter segmented control at top of History
-- [ ] Date range quick filters (Today, Week, Month, All)
-- [ ] Favorites-only toggle
-- [ ] Search bar filtering on annotation text
-- [ ] Better empty states for each filter combination
-- [ ] Inline annotation editing in drive detail
+- [x] Vehicle filter segmented control at top of History
+- [x] Date range quick filters (Today, Week, Month, All)
+- [x] Favorites-only toggle
+- [x] Search bar filtering on annotation text
+- [x] Better empty states for each filter combination
+- [x] Inline annotation editing in drive detail
 
 **Estimated size**: ~300 lines new/modified
 

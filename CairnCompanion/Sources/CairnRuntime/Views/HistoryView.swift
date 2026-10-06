@@ -9,7 +9,12 @@ public struct HistoryView: View {
     @State private var sessions: [DriveSession] = []
     @State private var serverTrips: [TripSnapshot] = []
     @State private var isLoading = true
-    @State private var selectedVehicle: Vehicle?
+    @State private var vehicles: [Vehicle] = []
+    @State private var filterVehicleID: String?
+    @State private var dateRange: DateRange = .all
+    @State private var showFavoritesOnly = false
+    @State private var searchText = ""
+    @State private var allAnnotations: [Annotation] = []
 
     public init(recorder: DriveRecorder, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient) {
         self.recorder = recorder
@@ -18,8 +23,51 @@ public struct HistoryView: View {
         self.syncClient = syncClient
     }
 
-    private var entries: [HistoryEntry] {
+    private var allEntries: [HistoryEntry] {
         HistoryMerger.merge(sessions: sessions, trips: serverTrips)
+    }
+
+    private var filteredEntries: [HistoryEntry] {
+        var result = allEntries
+
+        if let vid = filterVehicleID {
+            result = result.filter { $0.phoneSession?.vehicleID == vid }
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        switch dateRange {
+        case .today:
+            result = result.filter { calendar.isDateInToday($0.startedAt) }
+        case .week:
+            if let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start {
+                result = result.filter { $0.startedAt >= weekStart }
+            }
+        case .month:
+            if let monthStart = calendar.dateInterval(of: .month, for: now)?.start {
+                result = result.filter { $0.startedAt >= monthStart }
+            }
+        case .all:
+            break
+        }
+
+        if showFavoritesOnly {
+            let favTargetIDs = Set(allAnnotations.filter { $0.kind == .favorite }.map(\.targetID))
+            result = result.filter { favTargetIDs.contains($0.id) }
+        }
+
+        if !searchText.isEmpty {
+            let notesByTarget = Dictionary(grouping: allAnnotations.filter { $0.kind == .note }, by: \.targetID)
+            result = result.filter { entry in
+                notesByTarget[entry.id]?.contains { $0.text.localizedCaseInsensitiveContains(searchText) } == true
+            }
+        }
+
+        return result
+    }
+
+    private var isFiltered: Bool {
+        filterVehicleID != nil || dateRange != .all || showFavoritesOnly || !searchText.isEmpty
     }
 
     public var body: some View {
@@ -27,17 +75,25 @@ public struct HistoryView: View {
             Group {
                 if isLoading {
                     ProgressView()
-                } else if entries.isEmpty {
+                } else if allEntries.isEmpty {
                     ContentUnavailableView(
                         "No drives yet",
                         systemImage: "car.side",
                         description: Text("Drives are recorded automatically when the Cairn dongle connects.")
                     )
                 } else {
-                    driveList
+                    VStack(spacing: 0) {
+                        filterBar
+                        if filteredEntries.isEmpty {
+                            filteredEmptyState
+                        } else {
+                            driveList
+                        }
+                    }
                 }
             }
-            .navigationTitle(selectedVehicle?.displayName ?? "History")
+            .navigationTitle("History")
+            .searchable(text: $searchText, prompt: "Search notes")
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     syncButton
@@ -48,17 +104,120 @@ public struct HistoryView: View {
         }
     }
 
+    // MARK: - Filter Bar
+
+    @ViewBuilder
+    private var filterBar: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Menu {
+                    Button { filterVehicleID = nil } label: {
+                        HStack {
+                            Text("All Vehicles")
+                            if filterVehicleID == nil { Image(systemName: "checkmark") }
+                        }
+                    }
+                    Divider()
+                    ForEach(vehicles.filter { !$0.isArchived }) { vehicle in
+                        Button {
+                            filterVehicleID = vehicle.id
+                        } label: {
+                            HStack {
+                                Text(vehicle.displayName)
+                                if filterVehicleID == vehicle.id { Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "car.fill")
+                            .font(.caption)
+                        Text(vehicleFilterLabel)
+                            .font(.subheadline.weight(.medium))
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(filterVehicleID != nil ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(filterVehicleID != nil ? Color.accentColor : .primary)
+                }
+
+                Button {
+                    showFavoritesOnly.toggle()
+                } label: {
+                    Image(systemName: showFavoritesOnly ? "star.fill" : "star")
+                        .font(.subheadline)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(showFavoritesOnly ? Color.yellow.opacity(0.2) : Color.secondary.opacity(0.12), in: Capsule())
+                        .foregroundStyle(showFavoritesOnly ? .yellow : .secondary)
+                }
+
+                Spacer()
+            }
+
+            Picker("Date range", selection: $dateRange) {
+                ForEach(DateRange.allCases, id: \.self) { range in
+                    Text(range.label).tag(range)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private var vehicleFilterLabel: String {
+        if let vid = filterVehicleID, let v = vehicles.first(where: { $0.id == vid }) {
+            return v.displayName
+        }
+        return "All Vehicles"
+    }
+
+    // MARK: - Empty State
+
+    @ViewBuilder
+    private var filteredEmptyState: some View {
+        ContentUnavailableView {
+            Label("No matching drives", systemImage: "magnifyingglass")
+        } description: {
+            if showFavoritesOnly {
+                Text("No favorited drives found. Star a drive from its detail view.")
+            } else if !searchText.isEmpty {
+                Text("No drives have notes matching \"\(searchText)\".")
+            } else if dateRange != .all {
+                Text("No drives recorded \(dateRange.emptyLabel).")
+            } else if let vid = filterVehicleID, let v = vehicles.first(where: { $0.id == vid }) {
+                Text("No drives recorded for \(v.displayName).")
+            } else {
+                Text("Try adjusting your filters.")
+            }
+        } actions: {
+            Button("Clear Filters") {
+                filterVehicleID = nil
+                dateRange = .all
+                showFavoritesOnly = false
+                searchText = ""
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    // MARK: - Drive List
+
     private var driveList: some View {
         List {
-            ForEach(entries) { entry in
+            ForEach(filteredEntries) { entry in
                 NavigationLink(value: entry.id) {
-                    HistoryRow(entry: entry)
+                    HistoryRow(entry: entry, annotations: allAnnotations.filter { $0.targetID == entry.id })
                 }
             }
             .onDelete { indexSet in
+                let current = filteredEntries
                 Task {
                     for i in indexSet {
-                        if let id = entries[i].phoneSession?.id {
+                        if let id = current[i].phoneSession?.id {
                             try? await recorder.deleteSession(id)
                         }
                     }
@@ -70,8 +229,10 @@ public struct HistoryView: View {
         .listStyle(.insetGrouped)
         #endif
         .navigationDestination(for: String.self) { id in
-            if let entry = entries.first(where: { $0.id == id }) {
-                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore)
+            if let entry = allEntries.first(where: { $0.id == id }) {
+                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore) {
+                    Task { await loadAnnotations() }
+                }
             }
         }
     }
@@ -94,17 +255,43 @@ public struct HistoryView: View {
         .disabled(syncClient.state == .syncing)
     }
 
+    // MARK: - Data Loading
+
     private func load() async {
         isLoading = true
-        if let vid = vehicleStore.selectedVehicleID() {
-            selectedVehicle = try? await vehicleStore.vehicle(vid)
-            sessions = (try? await recorder.sessions(forVehicle: vid)) ?? []
-        } else {
-            selectedVehicle = nil
-            sessions = (try? await recorder.allSessions()) ?? []
-        }
+        vehicles = (try? await vehicleStore.listVehicles()) ?? []
+        sessions = (try? await recorder.allSessions()) ?? []
         serverTrips = syncClient.cachedTrips()
+        await loadAnnotations()
         isLoading = false
+    }
+
+    private func loadAnnotations() async {
+        allAnnotations = (try? await maintenanceStore.listAnnotations(vehicleID: nil)) ?? []
+    }
+}
+
+// MARK: - DateRange
+
+enum DateRange: String, CaseIterable {
+    case today, week, month, all
+
+    var label: String {
+        switch self {
+        case .today: "Today"
+        case .week: "Week"
+        case .month: "Month"
+        case .all: "All"
+        }
+    }
+
+    var emptyLabel: String {
+        switch self {
+        case .today: "today"
+        case .week: "this week"
+        case .month: "this month"
+        case .all: ""
+        }
     }
 }
 
@@ -112,12 +299,22 @@ public struct HistoryView: View {
 
 private struct HistoryRow: View {
     let entry: HistoryEntry
+    let annotations: [Annotation]
+
+    private var isFavorite: Bool {
+        annotations.contains { $0.kind == .favorite }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(entry.startedAt, style: .date)
                     .font(.headline)
+                if isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
                 Spacer()
                 sourceIcon(entry)
                 if let session = entry.phoneSession {
@@ -168,6 +365,13 @@ private struct HistoryRow: View {
                 }
                 .foregroundStyle(.secondary)
             }
+            let noteAnnotations = annotations.filter { $0.kind == .note }
+            if let firstNote = noteAnnotations.first {
+                Text(firstNote.text)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .padding(.vertical, 4)
         .opacity(entry.phoneSession?.quality == .bench ? 0.55 : 1)
@@ -217,12 +421,20 @@ private struct HistoryRow: View {
 
 // MARK: - Detail
 
-private struct DriveDetailView: View {
+struct DriveDetailView: View {
     let entry: HistoryEntry
     let maintenanceStore: GRDBMaintenanceStore
+    var onAnnotationChange: (() -> Void)?
     @State private var annotations: [Annotation] = []
     @State private var showAddNote = false
     @State private var noteText = ""
+    @State private var editingAnnotation: Annotation?
+
+    init(entry: HistoryEntry, maintenanceStore: GRDBMaintenanceStore, onAnnotationChange: (() -> Void)? = nil) {
+        self.entry = entry
+        self.maintenanceStore = maintenanceStore
+        self.onAnnotationChange = onAnnotationChange
+    }
 
     var body: some View {
         ScrollView {
@@ -277,9 +489,34 @@ private struct DriveDetailView: View {
                     try? await maintenanceStore.saveAnnotation(annotation)
                     noteText = ""
                     await loadAnnotations()
+                    onAnnotationChange?()
                 }
             }
             Button("Cancel", role: .cancel) { noteText = "" }
+        }
+        .alert("Edit Note", isPresented: Binding(
+            get: { editingAnnotation != nil },
+            set: { if !$0 { editingAnnotation = nil } }
+        )) {
+            if let editing = editingAnnotation {
+                TextField("Note", text: $noteText)
+                Button("Save") {
+                    var updated = editing
+                    updated.text = noteText
+                    updated.updatedAt = Date()
+                    Task {
+                        try? await maintenanceStore.saveAnnotation(updated)
+                        editingAnnotation = nil
+                        noteText = ""
+                        await loadAnnotations()
+                        onAnnotationChange?()
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    editingAnnotation = nil
+                    noteText = ""
+                }
+            }
         }
     }
 
@@ -301,6 +538,25 @@ private struct DriveDetailView: View {
                             Text(annotation.updatedAt, style: .date)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                        }
+                        .contextMenu {
+                            if annotation.kind == .note {
+                                Button {
+                                    noteText = annotation.text
+                                    editingAnnotation = annotation
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            Button(role: .destructive) {
+                                Task {
+                                    try? await maintenanceStore.deleteAnnotation(annotation.id)
+                                    await loadAnnotations()
+                                    onAnnotationChange?()
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
@@ -329,6 +585,7 @@ private struct DriveDetailView: View {
                 try? await maintenanceStore.saveAnnotation(fav)
             }
             await loadAnnotations()
+            onAnnotationChange?()
         }
     }
 
@@ -337,7 +594,7 @@ private struct DriveDetailView: View {
         GroupBox("Phone-Observed Session") {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 tile("Duration", formatDuration(session.duration))
-                tile("Streaming", session.streamingFraction.map { "\(Int($0 * 100))%" } ?? "—")
+                tile("Streaming", session.streamingFraction.map { "\(Int($0 * 100))%" } ?? "\u{2014}")
                 tile("Sent", "\(session.counters.sent)")
                 tile("Accepted", "\(session.counters.accepted)")
                 tile("Rejected", "\(session.counters.rejected)")

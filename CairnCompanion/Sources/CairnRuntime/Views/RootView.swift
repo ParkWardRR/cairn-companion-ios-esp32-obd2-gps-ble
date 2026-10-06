@@ -20,7 +20,7 @@ public struct RootView: View {
                 .tabItem { Label("Drive", systemImage: "location.fill") }
             HistoryView(recorder: session.recorder, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
+            GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, recorder: session.recorder)
                 .tabItem { Label("Garage", systemImage: "building.2") }
             SettingsView(session: session, syncClient: syncClient)
                 .tabItem { Label("Settings", systemImage: "gear") }

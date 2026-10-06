@@ -8,6 +8,7 @@ public protocol VehicleStore: Sendable {
 
     func assignments() async throws -> [VehicleAssignment]
     func assign(dongleID: String, to vehicleID: String) async throws
+    func unassign(dongleID: String) async throws
     func vehicleID(forDongle dongleID: String) -> String?
 
     func selectedVehicleID() -> String?

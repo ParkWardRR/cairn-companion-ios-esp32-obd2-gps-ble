@@ -83,6 +83,14 @@ public actor FileVehicleStore: VehicleStore {
         try data.write(to: assignmentsURL, options: .atomic)
     }
 
+    public func unassign(dongleID: String) throws {
+        var list = (try? assignments()) ?? []
+        list.removeAll { $0.dongleID == dongleID }
+        try ensureDirectory()
+        let data = try encoder.encode(list)
+        try data.write(to: assignmentsURL, options: .atomic)
+    }
+
     public nonisolated func vehicleID(forDongle dongleID: String) -> String? {
         let url = root.appendingPathComponent("assignments.json")
         guard FileManager.default.fileExists(atPath: url.path),

@@ -4,12 +4,14 @@ import SwiftUI
 public struct GarageView: View {
     let vehicleStore: GRDBVehicleStore
     let maintenanceStore: GRDBMaintenanceStore
+    let recorder: DriveRecorder
     @State private var vehicles: [Vehicle] = []
     @State private var showAddVehicle = false
 
-    public init(vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore) {
+    public init(vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, recorder: DriveRecorder) {
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
+        self.recorder = recorder
     }
 
     private var activeVehicles: [Vehicle] { vehicles.filter { !$0.isArchived } }
@@ -109,7 +111,8 @@ public struct GarageView: View {
                     VehicleProfileView(
                         vehicle: vehicle,
                         vehicleStore: vehicleStore,
-                        maintenanceStore: maintenanceStore
+                        maintenanceStore: maintenanceStore,
+                        recorder: recorder
                     )
                 }
             }
