@@ -1,18 +1,33 @@
 import CairnCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 public struct SettingsView: View {
     let session: DrivingSession
     let syncClient: TripSyncClient
+    let dataPorter: DataPorter
     @State private var lanURL: String = ""
     @State private var tailnetURL: String = ""
     @State private var showDeleteConfirm = false
     @State private var showServerSetup = false
     @State private var isProbing = false
+    @State private var showExportSheet = false
+    @State private var showImportPicker = false
+    @State private var exportPassphrase = ""
+    @State private var importPassphrase = ""
+    @State private var exportedFileURL: URL?
+    @State private var showShareSheet = false
+    @State private var importFileURL: URL?
+    @State private var showImportPassphrase = false
+    @State private var dataMessage: String?
+    @State private var dataError: String?
+    @State private var isExporting = false
+    @State private var isImporting = false
 
-    public init(session: DrivingSession, syncClient: TripSyncClient) {
+    public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter) {
         self.session = session
         self.syncClient = syncClient
+        self.dataPorter = dataPorter
     }
 
     public var body: some View {
@@ -23,6 +38,7 @@ public struct SettingsView: View {
                     diagnosticsSection
                     syncStatusSection
                 }
+                dataSection
                 aboutSection
                 dangerZone
             }
@@ -31,6 +47,48 @@ public struct SettingsView: View {
                 lanURL = syncClient.lanURL
                 tailnetURL = syncClient.tailnetURL
             }
+            .alert("Export", isPresented: $showExportSheet) {
+                SecureField("Passphrase", text: $exportPassphrase)
+                Button("Export") { performExport() }
+                Button("Cancel", role: .cancel) { exportPassphrase = "" }
+            } message: {
+                Text("Enter a passphrase to encrypt the backup. You'll need it to restore.")
+            }
+            .alert("Import", isPresented: $showImportPassphrase) {
+                SecureField("Passphrase", text: $importPassphrase)
+                Button("Import") { performImport() }
+                Button("Cancel", role: .cancel) { importPassphrase = ""; importFileURL = nil }
+            } message: {
+                Text("Enter the passphrase used when this backup was created.")
+            }
+            .alert("Done", isPresented: .init(get: { dataMessage != nil }, set: { if !$0 { dataMessage = nil } })) {
+                Button("OK") { dataMessage = nil }
+            } message: {
+                Text(dataMessage ?? "")
+            }
+            .alert("Error", isPresented: .init(get: { dataError != nil }, set: { if !$0 { dataError = nil } })) {
+                Button("OK") { dataError = nil }
+            } message: {
+                Text(dataError ?? "")
+            }
+            .fileImporter(isPresented: $showImportPicker, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first {
+                        importFileURL = url
+                        showImportPassphrase = true
+                    }
+                case .failure(let error):
+                    dataError = error.localizedDescription
+                }
+            }
+            #if os(iOS)
+            .sheet(isPresented: $showShareSheet) {
+                if let url = exportedFileURL {
+                    ShareSheet(url: url)
+                }
+            }
+            #endif
         }
     }
 
@@ -244,6 +302,99 @@ public struct SettingsView: View {
         }
     }
 
+    // MARK: - Data
+
+    @ViewBuilder
+    private var dataSection: some View {
+        Section {
+            Button {
+                showExportSheet = true
+            } label: {
+                HStack {
+                    Label("Export Data", systemImage: "square.and.arrow.up")
+                    Spacer()
+                    if isExporting { ProgressView() }
+                }
+            }
+            .disabled(isExporting)
+
+            Button {
+                showImportPicker = true
+            } label: {
+                HStack {
+                    Label("Import Data", systemImage: "square.and.arrow.down")
+                    Spacer()
+                    if isImporting { ProgressView() }
+                }
+            }
+            .disabled(isImporting)
+        } header: {
+            Text("Data")
+        } footer: {
+            Text("Export creates an encrypted .cairnbackup file containing vehicles, maintenance, odometer readings, and annotations. Drive sessions are not included — they re-sync from the server.")
+        }
+    }
+
+    private func performExport() {
+        guard !exportPassphrase.isEmpty else {
+            dataError = "Passphrase cannot be empty"
+            return
+        }
+        isExporting = true
+        let passphrase = exportPassphrase
+        exportPassphrase = ""
+        Task {
+            do {
+                let data = try await dataPorter.exportData(passphrase: passphrase)
+                let fileName = "cairn-backup-\(Self.dateStamp()).cairnbackup"
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                try data.write(to: tempURL)
+                exportedFileURL = tempURL
+                isExporting = false
+                #if os(iOS)
+                showShareSheet = true
+                #else
+                dataMessage = "Exported to \(tempURL.lastPathComponent)"
+                #endif
+            } catch {
+                isExporting = false
+                dataError = error.localizedDescription
+            }
+        }
+    }
+
+    private func performImport() {
+        guard let url = importFileURL else { return }
+        guard !importPassphrase.isEmpty else {
+            dataError = "Passphrase cannot be empty"
+            return
+        }
+        isImporting = true
+        let passphrase = importPassphrase
+        importPassphrase = ""
+        Task {
+            do {
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+                let data = try Data(contentsOf: url)
+                let summary = try await dataPorter.importData(data, passphrase: passphrase)
+                isImporting = false
+                importFileURL = nil
+                dataMessage = "Imported \(summary.vehicles) vehicles, \(summary.maintenance) maintenance entries, \(summary.odometer) odometer readings, \(summary.annotations) annotations"
+            } catch {
+                isImporting = false
+                importFileURL = nil
+                dataError = error.localizedDescription
+            }
+        }
+    }
+
+    private static func dateStamp() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
     // MARK: - About
 
     @ViewBuilder
@@ -303,3 +454,15 @@ public struct SettingsView: View {
         return String(format: "%.1fk", Double(n) / 1000)
     }
 }
+
+#if os(iOS)
+private struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+#endif

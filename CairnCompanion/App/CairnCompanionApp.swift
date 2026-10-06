@@ -7,6 +7,7 @@ struct CairnCompanionApp: App {
     private let vehicleStore: GRDBVehicleStore
     private let maintenanceStore: GRDBMaintenanceStore
     private let syncClient: TripSyncClient
+    private let dataPorter: DataPorter
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -20,6 +21,7 @@ struct CairnCompanionApp: App {
         session = DrivingSession(state: state, ble: ble, recorder: recorder)
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
+        self.dataPorter = DataPorter(db: db, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
         syncClient = TripSyncClient()
         #if DEBUG
         if let scenario = DemoMode.scenario {
@@ -37,17 +39,17 @@ struct CairnCompanionApp: App {
             #if DEBUG
             if let scale = DemoMode.scale {
                 GeometryReader { proxy in
-                    RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
+                    RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
                         .frame(width: proxy.size.width / scale, height: proxy.size.height / scale)
                         .scaleEffect(scale, anchor: .top)
                         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
                 .ignoresSafeArea(edges: .bottom)
             } else {
-                RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
+                RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
             }
             #else
-            RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
+            RootView(session: session, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient, dataPorter: dataPorter)
             #endif
         }
         .onChange(of: scenePhase) { _, phase in
