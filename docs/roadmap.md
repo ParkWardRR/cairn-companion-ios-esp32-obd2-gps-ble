@@ -49,8 +49,8 @@ On the app side, the link-health UI and the History tab are built, ahead of the 
 - [x] Connection guide, stale-pairing detection, and a "forget dongle" flow
 - [x] Persistent on-device `cairn-drive.log` (shareable from the Files app) and BLE diagnostics tracing
 - [x] Debug-only demo mode (`CAIRN_DEMO`) for simulator screenshots, including dropped, silent, and stale-pairing states
-- [x] Golden-vector tests: [golden-vectors.json](golden-vectors.json) from an independent spec implementation, replayed by the iOS tests
-- [x] Firmware repo consumes `golden-vectors.json` (6/6 pass in `test/host/ble_vectors.c`)
+- [x] Golden-vector tests: golden-vectors.json from the pinned contracts release, from an independent spec implementation, replayed by the iOS tests
+- [x] Firmware repo consumes the same `golden-vectors.json` (6/6 pass in `test/host/ble_vectors.c`)
 - [ ] Drive test: phone vs internal accuracy, battery, write rate
 
 **Exit:** all rows in [validation.md](validation.md) pass.

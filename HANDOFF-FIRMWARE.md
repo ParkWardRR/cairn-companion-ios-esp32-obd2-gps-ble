@@ -11,7 +11,7 @@ Last updated against iOS commit state of 2026-10-03.
 | [docs/ble-protocol.md](docs/ble-protocol.md) | Wire spec. Mirror it to `docs/ble-companion-protocol.md` in the firmware repo |
 | [docs/firmware-changes.md](docs/firmware-changes.md) | Module design, `source_flags` b5, source-state split, recording vs operational policy, storage risks |
 | [docs/validation.md](docs/validation.md) | Acceptance rows. Phase 1 stays open until all pass |
-| [docs/golden-vectors.json](docs/golden-vectors.json) | Shared byte vectors. Make your C decoder agree with them |
+| [golden-vectors.json](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/contracts-v0.2.0/contracts/ble/v1/vectors/golden/golden-vectors.json) | Shared byte vectors. Make your C decoder agree with them |
 | [docs/roadmap.md](docs/roadmap.md) | Current status; firmware rows are the unchecked ones under **Firmware** |
 
 ## State of play
@@ -59,7 +59,7 @@ All little-endian. Full table in `docs/ble-protocol.md`; these are the ones the 
 
 ## Using the golden vectors
 
-`docs/golden-vectors.json`:
+`contracts/ble/v1/vectors/golden/golden-vectors.json` (contracts-v0.2.0):
 
 - `now_unix` is the reference time for `gnss_fix`.
 - `gnss_fix[]`: `input` holds the Core Location values (`lat`, `lon` deg; `alt`, `hacc`, `vacc` m; `speed` m/s; `course` deg; `age` s; `seq`) and `hex` is the exact 28 B payload. For each case, decode `hex` and assert the decoded fields equal what `input` implies under the rules above, and that your validator accepts or rejects it correctly (the "invalid position" case must be rejected with the counter incremented; the others have valid position and must be accepted, subject to your staleness check since `age` is at most 2.0 s).

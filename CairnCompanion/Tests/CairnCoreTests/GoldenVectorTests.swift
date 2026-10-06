@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import CairnCore
 
-/// Replays docs/golden-vectors.json, which the firmware repo consumes too. The vectors come from an
+/// Replays contracts/ble/v1/vectors/golden/golden-vectors.json (the pinned contracts release), which the firmware repo consumes too. The vectors come from an
 /// independent implementation of the spec, so a mismatch means the encoder or the spec drifted.
 private struct Vectors: Decodable {
     struct Fix: Decodable {
@@ -23,13 +23,8 @@ private struct Vectors: Decodable {
     let utc_sync: [UTC]
 }
 
-private let vectors: Vectors = {
-    let url = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("docs/golden-vectors.json")
-    return try! JSONDecoder().decode(Vectors.self, from: Data(contentsOf: url))
-}()
+private let vectors: Vectors = try! JSONDecoder().decode(
+    Vectors.self, from: Contracts.data("ble/v1/vectors/golden/golden-vectors.json"))
 
 private func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
 

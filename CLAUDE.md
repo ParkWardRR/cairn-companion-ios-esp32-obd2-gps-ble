@@ -6,7 +6,7 @@ BLE companion app for the Cairn ESP32 OBD-II/GPS logger dongle.
 
 ```bash
 cd CairnCompanion && swift build   # macOS debug build
-cd CairnCompanion && swift test    # 131 tests, all CairnCore
+cd CairnCompanion && swift test    # 134 tests, all CairnCore (run scripts/fetch-contracts.sh first)
 ```
 
 For iOS builds, use Xcode (`CairnCompanion/CairnCompanion.xcodeproj`).
@@ -28,6 +28,10 @@ SPM multi-target inside `CairnCompanion/`:
 2. **History** (`HistoryView`) — drive sessions merged with server trips, annotations
 3. **Garage** (`GarageView` → `VehicleProfileView`) — vehicle cards, maintenance, odometer
 4. **Settings** (`SettingsView`) — server URL, sync status, danger zone
+
+## Contracts
+
+`contracts.lock` pins a release of the contracts (tag and commit). `scripts/fetch-contracts.sh` fetches it into `.contracts/` (git-ignored); run it before `swift test`. `CAIRN_CONTRACTS=<dir>` points the tests at a local checkout instead. Nothing from the contracts is vendored: BLE golden vectors and the sync/v1 vectors are read from there. Bumping the pin is the only way to change them.
 
 ## Security constraints
 
