@@ -225,7 +225,7 @@ public struct SettingsView: View {
         guard !code.isEmpty else { return }
 
         let serverURL = lanURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let baseURL = URL(string: serverURL), !serverURL.isEmpty else {
+        guard !serverURL.isEmpty else {
             enrolmentError = "Enter a server URL first"
             return
         }
@@ -235,39 +235,16 @@ public struct SettingsView: View {
 
         Task {
             do {
-                let transport = URLSessionTransport(baseURL: baseURL)
-                let placeholder = PlaceholderSigner()
-                let client = CairnServerClient(transport: transport, signer: placeholder)
-                #if os(iOS)
-                let deviceName = UIDevice.current.name
-                #else
-                let deviceName = Host.current().localizedName ?? "Mac"
-                #endif
-                let identity = try await service.enrol(
-                    code: code,
-                    deviceName: deviceName,
-                    using: client,
-                    localBaseURL: lanURL,
-                    tailnetBaseURL: tailnetURL
+                let identity = try await DeviceEnrolment.enrol(
+                    code: code, serverURL: serverURL, tailnetURL: tailnetURL, service: service
                 )
                 enrolmentState = .enrolled
                 enrolledIdentity = identity
                 invitationCode = ""
-                isEnrolling = false
-            } catch let error as CairnServerError {
-                isEnrolling = false
-                switch error {
-                case .forbidden(.enrolmentRefused):
-                    enrolmentError = "Invitation code is invalid or has been used"
-                case .unauthenticated:
-                    enrolmentError = "Enrolment proof was rejected by the server"
-                default:
-                    enrolmentError = "Server error: \(error.errorCode ?? "unknown")"
-                }
             } catch {
-                isEnrolling = false
-                enrolmentError = error.localizedDescription
+                enrolmentError = DeviceEnrolment.message(for: error)
             }
+            isEnrolling = false
         }
     }
 
@@ -792,14 +769,6 @@ public struct SettingsView: View {
     private func formattedCount(_ n: Int) -> String {
         if n < 1000 { return "\(n)" }
         return String(format: "%.1fk", Double(n) / 1000)
-    }
-}
-
-private struct PlaceholderSigner: RequestSigner, Sendable {
-    let clientID = ""
-    let publicKeyX963 = Data()
-    func sign(_ data: Data) throws -> Data {
-        throw CairnServerError.signingFailed
     }
 }
 

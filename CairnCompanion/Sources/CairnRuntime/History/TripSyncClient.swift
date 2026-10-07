@@ -146,7 +146,7 @@ public final class TripSyncClient {
 
         let start = Date()
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await CairnURLSession.shared.data(for: request)
             let latency = Int(Date().timeIntervalSince(start) * 1000)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 let code = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -253,7 +253,7 @@ public final class TripSyncClient {
                 request.setValue(auth, forHTTPHeaderField: "Authorization")
             }
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await CairnURLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 state = .failed("Invalid response")
                 return

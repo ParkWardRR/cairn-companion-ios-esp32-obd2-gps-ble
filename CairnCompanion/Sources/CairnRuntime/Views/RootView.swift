@@ -11,6 +11,13 @@ public struct RootView: View {
     private let dataPorter: DataPorter
     private let enrolmentService: EnrolmentService?
     @State private var showWelcome: Bool
+    @State private var pendingLink: PendingLink?
+    @State private var linkError: String?
+
+    private struct PendingLink: Identifiable {
+        let id = UUID()
+        let link: ConfigureLink
+    }
 
     public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
         self.session = session
@@ -23,6 +30,37 @@ public struct RootView: View {
     }
 
     public var body: some View {
+        content
+            #if DEBUG
+            .task {
+                // Simulator has no camera and iOS asks "Open in Cairn?" for simctl openurl, so
+                // let a test launch hand the link over directly: CAIRN_TEST_LINK=cairn://configure?...
+                if let raw = ProcessInfo.processInfo.environment["CAIRN_TEST_LINK"], let url = URL(string: raw) {
+                    pendingLink = (try? ConfigureLink.parse(url)).map(PendingLink.init)
+                }
+            }
+            #endif
+            .onOpenURL { url in
+                do {
+                    pendingLink = PendingLink(link: try ConfigureLink.parse(url))
+                } catch {
+                    linkError = "That link isn't a valid Cairn setup code. Ask for a new QR code."
+                }
+            }
+            .sheet(item: $pendingLink) { pending in
+                ConfigureLinkSheet(link: pending.link, syncClient: syncClient, enrolmentService: enrolmentService) {
+                    pendingLink = nil
+                }
+            }
+            .alert("Can't use this code", isPresented: .init(get: { linkError != nil }, set: { if !$0 { linkError = nil } })) {
+                Button("OK") { linkError = nil }
+            } message: {
+                Text(linkError ?? "")
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         if showWelcome {
             WelcomeView {
                 UserDefaults.standard.set(true, forKey: Self.hasSeenWelcomeKey)

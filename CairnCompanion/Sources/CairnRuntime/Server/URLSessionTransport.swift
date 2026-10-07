@@ -5,7 +5,7 @@ public final class URLSessionTransport: HTTPTransport, @unchecked Sendable {
     private let baseURL: URL
     private let session: URLSession
 
-    public init(baseURL: URL, session: URLSession = .shared) {
+    public init(baseURL: URL, session: URLSession = CairnURLSession.shared) {
         self.baseURL = baseURL
         self.session = session
     }
