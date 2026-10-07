@@ -208,16 +208,18 @@ private func errorResponse(status: Int, error: String, message: String = "") -> 
 @Suite struct EnrolmentServiceIdentityTests {
     @Test func loadIdentityReturnsStoredState() async throws {
         let store = InMemoryIdentityStore()
+        let keyProvider = SoftwareKeyProvider()
         let identity = EnrolledIdentity(
             clientID: "abc123", role: "admin", scope: ["*"],
             instanceID: "inst1", spkiSHA256: "spki",
             localBaseURL: "https://cairn.example.lan",
-            tailnetBaseURL: "https://cairn.ts.net"
+            tailnetBaseURL: "https://cairn.ts.net",
+            publicKeyHex: keyProvider.publicKeyHex
         )
         try await store.save(state: .enrolled, identity: identity)
 
         let service = EnrolmentService(
-            keyProvider: SoftwareKeyProvider(),
+            keyProvider: keyProvider,
             identityStore: store
         )
 
@@ -264,7 +266,8 @@ private func errorResponse(status: Int, error: String, message: String = "") -> 
         let identity = EnrolledIdentity(
             clientID: "deadbeef", role: "admin", scope: ["*"],
             instanceID: "i1", spkiSHA256: "s1",
-            localBaseURL: "", tailnetBaseURL: ""
+            localBaseURL: "", tailnetBaseURL: "",
+            publicKeyHex: keyProvider.publicKeyHex
         )
         try await store.save(state: .enrolled, identity: identity)
 
@@ -282,17 +285,58 @@ private func errorResponse(status: Int, error: String, message: String = "") -> 
         #expect(pubKey.isValidSignature(sig, for: testData))
     }
 
-    @Test func markRevoked() async throws {
+    // The bug this guards against: the Secure Enclave key was never saved, so each launch made a
+    // new key and every signed request was refused with 401 signature_does_not_verify.
+    @Test func anIdentityEnrolledWithAnotherKeyNeedsReenrolmentAndGetsNoSigner() async throws {
+        let store = InMemoryIdentityStore()
+        let earlierKey = SoftwareKeyProvider()
+        let identity = EnrolledIdentity(
+            clientID: "abc", role: "user", scope: ["*"], instanceID: "i1", spkiSHA256: "s1",
+            localBaseURL: "", tailnetBaseURL: "", publicKeyHex: earlierKey.publicKeyHex
+        )
+        try await store.save(state: .enrolled, identity: identity)
+
+        let service = EnrolmentService(keyProvider: SoftwareKeyProvider(), identityStore: store)
+        let (state, loaded) = await service.loadIdentity()
+        #expect(state == .needsReenrolment)
+        #expect(loaded?.clientID == "abc")
+        #expect(await service.makeSigner() == nil)
+    }
+
+    @Test func anIdentitySavedBeforeKeysWereKeptNeedsReenrolment() async throws {
         let store = InMemoryIdentityStore()
         let identity = EnrolledIdentity(
-            clientID: "abc", role: "admin", scope: ["*"],
-            instanceID: "i1", spkiSHA256: "s1",
+            clientID: "abc", role: "user", scope: ["*"], instanceID: "i1", spkiSHA256: "s1",
             localBaseURL: "", tailnetBaseURL: ""
         )
         try await store.save(state: .enrolled, identity: identity)
 
+        let service = EnrolmentService(keyProvider: SoftwareKeyProvider(), identityStore: store)
+        let (state, _) = await service.loadIdentity()
+        #expect(state == .needsReenrolment)
+    }
+
+    @Test func aStoredIdentityWithoutAKeyStillDecodes() throws {
+        let old = Data("""
+        {"clientID":"abc","role":"user","scope":["*"],"instanceID":"i","spkiSHA256":"s","localBaseURL":"","tailnetBaseURL":""}
+        """.utf8)
+        let identity = try JSONDecoder().decode(EnrolledIdentity.self, from: old)
+        #expect(identity.publicKeyHex == nil)
+    }
+
+    @Test func markRevoked() async throws {
+        let store = InMemoryIdentityStore()
+        let keyProvider = SoftwareKeyProvider()
+        let identity = EnrolledIdentity(
+            clientID: "abc", role: "admin", scope: ["*"],
+            instanceID: "i1", spkiSHA256: "s1",
+            localBaseURL: "", tailnetBaseURL: "",
+            publicKeyHex: keyProvider.publicKeyHex
+        )
+        try await store.save(state: .enrolled, identity: identity)
+
         let service = EnrolmentService(
-            keyProvider: SoftwareKeyProvider(),
+            keyProvider: keyProvider,
             identityStore: store
         )
 

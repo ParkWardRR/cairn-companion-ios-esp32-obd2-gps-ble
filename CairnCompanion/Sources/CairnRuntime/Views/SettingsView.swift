@@ -186,6 +186,27 @@ public struct SettingsView: View {
                 }
             }
 
+        case .needsReenrolment:
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "key.slash.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Set this phone up again")
+                            .font(.subheadline.weight(.semibold))
+                        Text("This phone's sign-in key is not the one the server knows, so the server refuses it. Scan a new setup QR code from the dashboard's Add a phone page, or reset the identity and enter a new invitation code.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Button("Reset Identity", role: .destructive) {
+                    showResetIdentity = true
+                }
+            } header: {
+                Text("Identity")
+            }
+
         case .revoked:
             Section {
                 HStack(spacing: 12) {

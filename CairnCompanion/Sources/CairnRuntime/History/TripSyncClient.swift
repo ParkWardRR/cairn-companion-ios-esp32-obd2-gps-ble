@@ -235,6 +235,18 @@ public final class TripSyncClient {
         }
 
         let signer = await enrolmentService?.makeSigner()
+        if signer == nil, let (enrolment, _) = await enrolmentService?.loadIdentity() {
+            switch enrolment {
+            case .needsReenrolment:
+                state = .failed("This phone must be set up again: open Settings, or scan a new setup QR code from the dashboard.")
+                return
+            case .revoked:
+                state = .failed("The server has revoked this phone. Reset the identity in Settings and scan a new setup QR code.")
+                return
+            default:
+                break
+            }
+        }
 
         do {
             let path = signer != nil ? "v1/snapshot" : "api/snapshot"
@@ -268,7 +280,9 @@ public final class TripSyncClient {
             }
 
             guard http.statusCode == 200 else {
-                state = .failed("Server returned \(http.statusCode)")
+                state = .failed(http.statusCode == 401 && signer != nil
+                    ? "The server did not accept this phone's sign-in (401). Scan a new setup QR code from the dashboard."
+                    : "Server returned \(http.statusCode)")
                 return
             }
 

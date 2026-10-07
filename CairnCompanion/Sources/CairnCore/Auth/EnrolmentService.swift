@@ -49,14 +49,21 @@ public actor EnrolmentService {
             instanceID: result.serverIdentity.instanceID,
             spkiSHA256: result.serverIdentity.spkiSHA256,
             localBaseURL: localBaseURL,
-            tailnetBaseURL: tailnetBaseURL
+            tailnetBaseURL: tailnetBaseURL,
+            publicKeyHex: keyProvider.publicKeyHex
         )
         try await identityStore.save(state: .enrolled, identity: identity)
         return identity
     }
 
+    /// The stored identity, except that an enrolled one whose registered key is not the key this
+    /// phone holds now is reported as `.needsReenrolment`: its requests could only fail with 401.
     public func loadIdentity() async -> (EnrolmentState, EnrolledIdentity?) {
-        await identityStore.load()
+        let (state, identity) = await identityStore.load()
+        if state == .enrolled, let identity, identity.publicKeyHex != keyProvider.publicKeyHex {
+            return (.needsReenrolment, identity)
+        }
+        return (state, identity)
     }
 
     public func markRevoked() async throws {
@@ -70,7 +77,7 @@ public actor EnrolmentService {
     }
 
     public func makeSigner() async -> (any RequestSigner)? {
-        let (state, identity) = await identityStore.load()
+        let (state, identity) = await loadIdentity()
         guard state == .enrolled, let identity else { return nil }
         return KeyProviderSigner(provider: keyProvider, clientID: identity.clientID)
     }

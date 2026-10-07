@@ -31,12 +31,7 @@ struct CairnCompanionApp: App {
         self.maintenanceStore = maintenanceStore
         self.dataPorter = DataPorter(db: db, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
 
-        let keyProvider: any KeyProvider
-        do {
-            keyProvider = try SecureEnclaveKeyProvider()
-        } catch {
-            keyProvider = SoftwareKeyProvider()
-        }
+        let keyProvider = IdentityKeys.make()
         let identityStore = KeychainIdentityStore()
         let enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
         self.enrolmentService = enrolmentService
@@ -54,6 +49,10 @@ struct CairnCompanionApp: App {
         session.resumeIfEnabled()
         let client = syncClient
         Task { await client.loadCachedSnapshot() }
+        #if DEBUG
+        // A test launch can force a sync (CAIRN_TEST_SYNC=1) to prove a relaunched app still signs in.
+        if ProcessInfo.processInfo.environment["CAIRN_TEST_SYNC"] != nil { syncClient.sync() }
+        #endif
         if syncClient.isStale { syncClient.sync() }
     }
 
