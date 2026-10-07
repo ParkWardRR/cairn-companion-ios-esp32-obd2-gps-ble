@@ -36,7 +36,7 @@ Cairn is a small ESP32 dongle in the car's OBD-II port. It records every drive (
 The app does three jobs:
 
 1. **GPS assist.** The dongle sits low under the dash with a poor view of the sky. The phone on your windshield has a better one, so the app streams its location, with an accuracy figure for every fix, to the dongle over Bluetooth LE.
-2. **Offload relay.** After a drive the phone pulls the dongle's sealed trip bundles over BLE, uploads them to your server, and hands the server's signed receipt back so the dongle can free space. The phone moves bundles it cannot read or alter. **This job is specified end to end but not yet built in the app** (see [Status](#status-and-roadmap)).
+2. **Offload relay.** After a drive the phone pulls the dongle's sealed trip bundles over BLE, uploads them to your server, and hands the server's signed receipt back so the dongle can free space. The phone moves bundles it cannot read or alter. **The message codec, session and transfer checks landed 2026-10-06 (PR #32). The CoreBluetooth wiring is still open ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)), so the app does not yet pair with the dongle; the first real over-the-air offload (nine bundles in 62 s) was carried by `cmd/cairn-phone` in the server repository, which is the reference this app matches.** See [Status](#status-and-roadmap).
 3. **Server client and trip browser.** The app enrols with your server as a named client, signs every request with a key that never leaves the phone's Secure Enclave, and keeps a local copy of your trips so History works offline. The signing client is built and tested; wiring it into the screens is still to do.
 
 It also works with no server at all: pairing, GPS assist, drive history, a garage with a maintenance log, and encrypted backup are all local ([standalone mode](#standalone-mode)).
@@ -204,7 +204,7 @@ The 28-byte `GNSS_FIX` layout, sentinels, `fix_type` mapping, staleness rules (a
 
 ## The relay path, and why the phone cannot read or alter bundles
 
-> **Status: specified, and implemented on the firmware, on the server and in a Go reference client. The BLE half is not implemented in this app yet** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)). The server calls it needs (`relayOffer`, `relayChunk`, `relayCommit`, `relayReceipt`) are already in `CairnServerClient` and replayed against the server's recorded exchanges.
+> **Status: specified, and implemented on the firmware, on the server and in a Go reference client. The relay-path message codec, session and transfer checks landed in this app on 2026-10-06 (PR #32). The CoreBluetooth half is still open** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)). The server calls it needs (`relayOffer`, `relayChunk`, `relayCommit`, `relayReceipt`) are already in `CairnServerClient` and replayed against the server's recorded exchanges. The reference client (`cmd/cairn-phone` on macOS) **carried the first real over-the-air offload on 2026-10-06**: nine bundles in 62 s, nine receipts verified on the dongle and pruned. The app will replace it once #14 lands.
 
 In the shipped firmware the dongle has no Wi-Fi, no network stack and no server credential. A trip is sealed into a **bundle**: a manifest signed by the dongle's Ed25519 key plus encrypted segments (XChaCha20-Poly1305). The phone is the dongle's only way out.
 
