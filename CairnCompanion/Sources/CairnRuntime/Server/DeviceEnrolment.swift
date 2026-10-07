@@ -4,6 +4,12 @@ import Foundation
 import UIKit
 #endif
 
+extension Notification.Name {
+    /// Posted when the server address, the pinned certificate or the enrolment changed outside the
+    /// Settings screen (the setup sheet), so a Settings screen that is already showing can reload.
+    static let cairnSetupChanged = Notification.Name("app.cairn.companion.setupChanged")
+}
+
 /// Runs enrolment against the server and words its failures. Shared by the Settings form and the
 /// `cairn://configure` sheet, so both behave and read the same.
 enum DeviceEnrolment {
@@ -20,10 +26,12 @@ enum DeviceEnrolment {
         #else
         let deviceName = Host.current().localizedName ?? "Mac"
         #endif
-        return try await service.enrol(
+        let identity = try await service.enrol(
             code: code, deviceName: deviceName, using: client,
             localBaseURL: serverURL, tailnetBaseURL: tailnetURL
         )
+        NotificationCenter.default.post(name: .cairnSetupChanged, object: nil)
+        return identity
     }
 
     static func message(for error: Error) -> String {

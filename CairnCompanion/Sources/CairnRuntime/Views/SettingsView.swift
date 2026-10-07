@@ -63,10 +63,10 @@ public struct SettingsView: View {
                 dangerZone
             }
             .navigationTitle("Settings")
-            .onAppear {
-                lanURL = syncClient.lanURL
-                tailnetURL = syncClient.tailnetURL
-                loadEnrolmentState()
+            .onAppear(perform: reloadSetup)
+            // The setup sheet (scan a QR code) changes all of this while this screen is showing.
+            .onReceive(NotificationCenter.default.publisher(for: .cairnSetupChanged).receive(on: DispatchQueue.main)) { _ in
+                reloadSetup()
             }
             .confirmationDialog("Reset device identity?", isPresented: $showResetIdentity, titleVisibility: .visible) {
                 Button("Reset Identity", role: .destructive) {
@@ -236,6 +236,12 @@ public struct SettingsView: View {
                 Text("Identity")
             }
         }
+    }
+
+    private func reloadSetup() {
+        lanURL = syncClient.lanURL
+        tailnetURL = syncClient.tailnetURL
+        loadEnrolmentState()
     }
 
     private func loadEnrolmentState() {
