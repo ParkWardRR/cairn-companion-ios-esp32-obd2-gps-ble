@@ -23,8 +23,12 @@ public final class CairnBLEManager: NSObject {
     private var baroCharacteristic: CBCharacteristic?
     private var utcCharacteristic: CBCharacteristic?
     private var engineDeclarationCharacteristic: CBCharacteristic?
+    private var deviceInfoCharacteristic: CBCharacteristic?
     private var obdCharacteristic: CBCharacteristic?
     private var deviceStatusCharacteristic: CBCharacteristic?
+    /// The last parsed `DEVICE_INFO` value read from the connected dongle. `nil` until the
+    /// dongle sets capability bit 3 and the read lands.
+    public private(set) var lastDeviceInfo: DeviceInfo?
     private var wantsConnection = false
     private var reconnectTask: Task<Void, Never>?
     private var streamingTask: Task<Void, Never>?
@@ -51,6 +55,10 @@ public final class CairnBLEManager: NSObject {
     public var onOBDReceived: (() -> Void)?
     /// A `DEVICE_STATUS` notification arrived.
     public var onDeviceStatus: ((DeviceStatus) -> Void)?
+    /// The connected dongle reported its device information. Fires once per connection,
+    /// after the protocol version is read and the dongle set capability bit 3. A value with
+    /// `truncated == true` means the dongle had more engine records than fit in 512 B.
+    public var onDeviceInfo: ((DeviceInfo) -> Void)?
 
     /// Create at launch so state restoration can deliver its callback.
     public init(state: SessionState) {
@@ -107,6 +115,8 @@ public final class CairnBLEManager: NSObject {
         fixCharacteristic = nil
         baroCharacteristic = nil
         engineDeclarationCharacteristic = nil
+        deviceInfoCharacteristic = nil
+        lastDeviceInfo = nil
         utcCharacteristic = nil
         obdCharacteristic = nil
         deviceStatusCharacteristic = nil
@@ -143,6 +153,25 @@ public final class CairnBLEManager: NSObject {
 
     /// Whether the connected dongle exposes `ENGINE_DECLARATION`.
     public var supportsEngineDeclaration: Bool { engineDeclarationCharacteristic != nil }
+
+    /// Whether the connected dongle exposes `DEVICE_INFO`.
+    public var supportsDeviceInfo: Bool { deviceInfoCharacteristic != nil }
+
+    /// Whether this dongle has `vehicle`'s engine profile compiled in. Returns `.unknown`
+    /// before `DEVICE_INFO` lands, `.notMapped` if the vehicle has no firmware profile id,
+    /// `.installed` on a match, `.missing` when the id is set but not reported by the dongle.
+    public func engineInstalled(forVehicle vehicle: Vehicle) -> EngineInstalledResult {
+        guard let info = lastDeviceInfo else { return .unknown }
+        guard let id = vehicle.firmwareEngineProfileID else { return .notMapped }
+        return info.installedEngine(forProfileID: id) != nil ? .installed : .missing(id)
+    }
+
+    public enum EngineInstalledResult: Equatable, Sendable {
+        case unknown                  // device info has not arrived yet
+        case notMapped                // vehicle has no firmware profile id (unknown engine code / make)
+        case installed                // the dongle reports this engine as installed
+        case missing(String)          // the id is set but the dongle did not report it
+    }
 
     /// Declare an engine profile id to the dongle (`ENGINE_DECLARATION`, suffix `0004`).
     /// A UTF-8 engine profile id (1–31 B after encoding) such as `bmw-n20`. The dongle
@@ -406,6 +435,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
              CairnGATTProfile.companionStatus, CairnGATTProfile.protocolVersion,
              CairnGATTProfile.baroAlt, CairnGATTProfile.utcSync,
              CairnGATTProfile.engineDeclaration,
+             CairnGATTProfile.deviceInfo,
              CairnGATTProfile.obdLive, CairnGATTProfile.deviceStatus],
             for: service
         )
@@ -428,6 +458,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
         baroCharacteristic = found[CairnGATTProfile.baroAlt]
         utcCharacteristic = found[CairnGATTProfile.utcSync]
         engineDeclarationCharacteristic = found[CairnGATTProfile.engineDeclaration]
+        deviceInfoCharacteristic = found[CairnGATTProfile.deviceInfo]
         obdCharacteristic = found[CairnGATTProfile.obdLive]
         deviceStatusCharacteristic = found[CairnGATTProfile.deviceStatus]
         // Every characteristic needs an encrypted, authenticated link; the first access prompts for the passkey.
@@ -475,6 +506,20 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
             guard let version = PayloadDecoder.protocolVersion(data) else { return retry("Bad protocol version payload") }
             guard version.isSupported else { return fail("Unsupported protocol v\(version.version)") }
             becomeReady()
+            // Bit 3 of the capabilities bitmap means DEVICE_INFO is present. Read it once per
+            // connection (and once per RETURNED event when uplink events are wired in).
+            if version.hasDeviceInformation, let devInfo = deviceInfoCharacteristic {
+                peripheral.readValue(for: devInfo)
+            }
+        case CairnGATTProfile.deviceInfo:
+            do {
+                let info = try parseDeviceInfo(data)
+                lastDeviceInfo = info
+                onDeviceInfo?(info)
+                trace("device info: fw \(info.firmware?.major ?? 0).\(info.firmware?.minor ?? 0).\(info.firmware?.patch ?? 0), \(info.engines.count) engine(s)\(info.truncated ? " (truncated)" : "")")
+            } catch {
+                trace("device info parse error: \(error)")
+            }
         case CairnGATTProfile.gnssQuality:
             if let quality = PayloadDecoder.gnssQuality(data) {
                 state.deviceQuality = quality

@@ -25,6 +25,11 @@ public enum CairnGATTProfile {
     public static var obdLive: CBUUID { uuid(suffix: "0020") }
     public static var deviceStatus: CBUUID { uuid(suffix: "0021") }
 
+    /// Device information (read-once per connection). Only present when `PROTOCOL_VERSION`
+    /// capability bit 3 is set; the payload parses via `parseDeviceInfo`. See
+    /// `contracts/ble/v1/device-info.md`.
+    public static var deviceInfo: CBUUID { uuid(suffix: "0040") }
+
     /// Minimum `maximumWriteValueLength(for: .withoutResponse)` needed to send a `GNSS_FIX`.
     public static var requiredWriteLength: Int { GNSSFixPayload.size }
 

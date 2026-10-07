@@ -108,6 +108,11 @@ public struct ProtocolVersion: Sendable, Equatable {
 
     /// False for unknown major versions; the app must not stream in that case.
     public var isSupported: Bool { version == CairnGATTProfile.supportedMajorVersion }
+
+    /// Capabilities bit 2: `BUNDLE_OFFLOAD` is supported.
+    public var hasBundleOffload: Bool { (capabilities & 0x04) != 0 }
+    /// Capabilities bit 3: `DEVICE_INFO` characteristic is present and must be read.
+    public var hasDeviceInformation: Bool { (capabilities & 0x08) != 0 }
 }
 
 /// Decoders validate length before reading. GATT gives boundaries, not guarantees.
