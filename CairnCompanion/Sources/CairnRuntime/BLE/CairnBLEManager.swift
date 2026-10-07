@@ -22,6 +22,7 @@ public final class CairnBLEManager: NSObject {
     /// Phase 2 characteristics; nil when the dongle firmware does not expose them.
     private var baroCharacteristic: CBCharacteristic?
     private var utcCharacteristic: CBCharacteristic?
+    private var engineDeclarationCharacteristic: CBCharacteristic?
     private var obdCharacteristic: CBCharacteristic?
     private var deviceStatusCharacteristic: CBCharacteristic?
     private var wantsConnection = false
@@ -105,6 +106,7 @@ public final class CairnBLEManager: NSObject {
     private func clearCharacteristics() {
         fixCharacteristic = nil
         baroCharacteristic = nil
+        engineDeclarationCharacteristic = nil
         utcCharacteristic = nil
         obdCharacteristic = nil
         deviceStatusCharacteristic = nil
@@ -138,6 +140,22 @@ public final class CairnBLEManager: NSObject {
     /// Whether the connected dongle exposes `BARO_ALT` / `UTC_SYNC`.
     public var supportsBaroAlt: Bool { baroCharacteristic != nil }
     public var supportsUTCSync: Bool { utcCharacteristic != nil }
+
+    /// Whether the connected dongle exposes `ENGINE_DECLARATION`.
+    public var supportsEngineDeclaration: Bool { engineDeclarationCharacteristic != nil }
+
+    /// Declare an engine profile id to the dongle (`ENGINE_DECLARATION`, suffix `0004`).
+    /// A UTF-8 engine profile id (1–31 B after encoding) such as `bmw-n20`. The dongle
+    /// persists the declaration in NVS and uses it in its engine-discovery chain, so
+    /// writing once per bond after the user picks a vehicle is enough. Returns `false`
+    /// when the dongle does not expose the characteristic or the string is empty or
+    /// longer than 31 UTF-8 bytes. See `contracts/ble/v1/spec.md` § `ENGINE_DECLARATION`.
+    @discardableResult
+    public func sendEngineDeclaration(_ engineProfileID: String) -> Bool {
+        let data = Data(engineProfileID.utf8)
+        guard (1...31).contains(data.count) else { return false }
+        return write(data, to: engineDeclarationCharacteristic)
+    }
 
     /// Uses write-without-response when the characteristic offers it, otherwise a confirmed write.
     private func write(_ data: Data, to characteristic: CBCharacteristic?) -> Bool {
@@ -387,6 +405,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
             [CairnGATTProfile.gnssFix, CairnGATTProfile.gnssQuality,
              CairnGATTProfile.companionStatus, CairnGATTProfile.protocolVersion,
              CairnGATTProfile.baroAlt, CairnGATTProfile.utcSync,
+             CairnGATTProfile.engineDeclaration,
              CairnGATTProfile.obdLive, CairnGATTProfile.deviceStatus],
             for: service
         )
@@ -408,6 +427,7 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
         fixCharacteristic = fix
         baroCharacteristic = found[CairnGATTProfile.baroAlt]
         utcCharacteristic = found[CairnGATTProfile.utcSync]
+        engineDeclarationCharacteristic = found[CairnGATTProfile.engineDeclaration]
         obdCharacteristic = found[CairnGATTProfile.obdLive]
         deviceStatusCharacteristic = found[CairnGATTProfile.deviceStatus]
         // Every characteristic needs an encrypted, authenticated link; the first access prompts for the passkey.

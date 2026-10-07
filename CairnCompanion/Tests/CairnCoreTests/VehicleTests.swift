@@ -42,6 +42,23 @@ struct VehicleTests {
         let set: Set<Vehicle> = [v1, v2]
         #expect(set.count == 1)
     }
+
+    @Test func firmwareEngineProfileForKnownBMW() {
+        // N20 → bmw-n20, B58 → bmw-b58. Make matching is case-insensitive.
+        #expect(Vehicle(year: 2014, make: "BMW", model: "428i", engineCode: "N20").firmwareEngineProfileID == "bmw-n20")
+        #expect(Vehicle(year: 2015, make: "bmw", model: "428i", engineCode: "n20").firmwareEngineProfileID == "bmw-n20")
+        #expect(Vehicle(year: 2016, make: "BMW", model: "428i", engineCode: "N26").firmwareEngineProfileID == "bmw-n20")
+        #expect(Vehicle(year: 2017, make: "BMW", model: "M240i", engineCode: "B58").firmwareEngineProfileID == "bmw-b58")
+    }
+
+    @Test func firmwareEngineProfileNilWhenUnknown() {
+        // An unknown engine code or make returns nil so the dongle falls back to its own
+        // discovery (VIN pattern, default) rather than being told something invalid.
+        #expect(Vehicle(year: 2020, make: "BMW", model: "M3", engineCode: "S58").firmwareEngineProfileID == nil)
+        #expect(Vehicle(year: 2015, make: "Audi", model: "S3", engineCode: "N20").firmwareEngineProfileID == nil)
+        #expect(Vehicle(year: 2015, make: "BMW", model: "428i").firmwareEngineProfileID == nil)
+        #expect(Vehicle(year: 2015, make: "BMW", model: "428i", engineCode: "").firmwareEngineProfileID == nil)
+    }
 }
 
 @Suite("VehicleAssignment")

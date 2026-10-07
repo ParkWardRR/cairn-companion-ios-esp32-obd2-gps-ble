@@ -16,6 +16,10 @@ public enum CairnGATTProfile {
     /// Phase 2 writes. Optional: the app uses them only if the dongle exposes them.
     public static var baroAlt: CBUUID { uuid(suffix: "0002") }
     public static var utcSync: CBUUID { uuid(suffix: "0003") }
+    /// Engine profile id (UTF-8, 1–31 B). Sent once per bond after the user picks a vehicle
+    /// whose profile differs from what the dongle would auto-select. See
+    /// contracts/ble/v1/spec.md § ENGINE_DECLARATION.
+    public static var engineDeclaration: CBUUID { uuid(suffix: "0004") }
 
     /// Phase 2 notifies. Optional: present only when the dongle has OBD and device health.
     public static var obdLive: CBUUID { uuid(suffix: "0020") }
