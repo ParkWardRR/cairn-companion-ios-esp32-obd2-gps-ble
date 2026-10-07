@@ -159,7 +159,10 @@ public final class TripSyncClient {
         } catch {
             let latency = Int(Date().timeIntervalSince(start) * 1000)
             return ProbeResult(route: route, latencyMs: latency, instanceID: nil,
-                               error: error.localizedDescription, probedAt: Date())
+                               error: ProbeFailure.message(
+                                    for: (error as? URLError)?.code, tailnet: route == .tailnet,
+                                    fallback: error.localizedDescription),
+                               probedAt: Date())
         }
     }
 
