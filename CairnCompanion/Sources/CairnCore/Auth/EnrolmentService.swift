@@ -71,9 +71,11 @@ public actor EnrolmentService {
         try await identityStore.save(state: .revoked, identity: identity)
     }
 
+    /// Forgets the enrolment, then replaces the key. The enrolment goes first so a key that
+    /// cannot be replaced still leaves the phone able to enrol again, rather than stuck.
     public func reset() async throws {
-        try keyProvider.deleteKey()
         try await identityStore.clear()
+        try keyProvider.deleteKey()
     }
 
     public func makeSigner() async -> (any RequestSigner)? {

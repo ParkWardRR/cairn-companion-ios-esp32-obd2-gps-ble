@@ -68,6 +68,13 @@ public struct SettingsView: View {
                 tailnetURL = syncClient.tailnetURL
                 loadEnrolmentState()
             }
+            .confirmationDialog("Reset device identity?", isPresented: $showResetIdentity, titleVisibility: .visible) {
+                Button("Reset Identity", role: .destructive) {
+                    resetIdentity()
+                }
+            } message: {
+                Text("This forgets this phone's sign-in key and enrolment. You will need a setup QR code or a new invitation code to enrol again.")
+            }
             .alert("Export", isPresented: $showExportSheet) {
                 SecureField("Passphrase", text: $exportPassphrase)
                 Button("Export") { performExport() }
@@ -751,18 +758,11 @@ public struct SettingsView: View {
                     .foregroundStyle(.red)
             }
 
-            if enrolmentService != nil && enrolmentState == .enrolled {
+            if enrolmentService != nil && enrolmentState != .notEnrolled && enrolmentState != .enrolling {
                 Button(role: .destructive) {
                     showResetIdentity = true
                 } label: {
                     Label("Reset Identity", systemImage: "person.crop.circle.badge.minus")
-                }
-                .confirmationDialog("Reset device identity?", isPresented: $showResetIdentity) {
-                    Button("Reset Identity", role: .destructive) {
-                        resetIdentity()
-                    }
-                } message: {
-                    Text("This deletes the Secure Enclave key and enrolment. You will need a new invitation code to re-enrol.")
                 }
             }
         } header: {
@@ -781,9 +781,16 @@ public struct SettingsView: View {
     private func resetIdentity() {
         guard let service = enrolmentService else { return }
         Task {
-            try? await service.reset()
-            enrolmentState = .notEnrolled
-            enrolledIdentity = nil
+            do {
+                try await service.reset()
+            } catch {
+                // The enrolment is cleared before the key is replaced, so this phone can enrol
+                // again either way; say that the key could not be replaced.
+                enrolmentError = "The identity was cleared, but the key could not be replaced: \(error.localizedDescription)"
+            }
+            let (state, identity) = await service.loadIdentity()
+            enrolmentState = state
+            enrolledIdentity = identity
         }
     }
 

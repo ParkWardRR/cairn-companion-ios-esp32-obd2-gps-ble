@@ -250,6 +250,44 @@ private func errorResponse(status: Int, error: String, message: String = "") -> 
         #expect(loaded == nil)
     }
 
+    private struct KeyThatCannotBeReplaced: KeyProvider {
+        let inner = SoftwareKeyProvider()
+        var publicKeyX963: Data { inner.publicKeyX963 }
+        var publicKeyHex: String { inner.publicKeyHex }
+        func sign(_ data: Data) throws -> Data { try inner.sign(data) }
+        func deleteKey() throws { throw EnrolmentError.proofSigningFailed }
+    }
+
+    @Test func resetClearsTheEnrolmentEvenWhenTheKeyCannotBeReplaced() async throws {
+        let store = InMemoryIdentityStore()
+        let key = KeyThatCannotBeReplaced()
+        try await store.save(state: .enrolled, identity: EnrolledIdentity(
+            clientID: "abc", role: "user", scope: ["*"], instanceID: "i", spkiSHA256: "s",
+            localBaseURL: "", tailnetBaseURL: "", publicKeyHex: key.publicKeyHex
+        ))
+        let service = EnrolmentService(keyProvider: key, identityStore: store)
+
+        await #expect(throws: EnrolmentError.self) { try await service.reset() }
+
+        let (state, loaded) = await service.loadIdentity()
+        #expect(state == .notEnrolled)
+        #expect(loaded == nil)
+    }
+
+    @Test func resetWorksFromTheStatesThatAskedForIt() async throws {
+        for stored in [EnrolmentState.revoked, .needsReenrolment, .enrolled] {
+            let store = InMemoryIdentityStore()
+            try await store.save(state: stored == .needsReenrolment ? .enrolled : stored, identity: EnrolledIdentity(
+                clientID: "abc", role: "user", scope: ["*"], instanceID: "i", spkiSHA256: "s",
+                localBaseURL: "", tailnetBaseURL: "", publicKeyHex: stored == .needsReenrolment ? "00" : nil
+            ))
+            let service = EnrolmentService(keyProvider: SoftwareKeyProvider(), identityStore: store)
+            try await service.reset()
+            let (state, _) = await service.loadIdentity()
+            #expect(state == .notEnrolled, "from \(stored)")
+        }
+    }
+
     @Test func makeSignerReturnsNilWhenNotEnrolled() async throws {
         let service = EnrolmentService(
             keyProvider: SoftwareKeyProvider(),
