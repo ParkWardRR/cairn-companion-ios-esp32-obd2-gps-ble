@@ -22,7 +22,11 @@ struct CairnCompanionApp: App {
         let maintenanceStore = GRDBMaintenanceStore(db: db)
         let recorder = DriveRecorder(store: driveStore, vehicleStore: vehicleStore)
         let ble = CairnBLEManager(state: state)
-        session = DrivingSession(state: state, ble: ble, recorder: recorder)
+        // Hold references in locals too, so the Task { ... } below captures those (reference-
+        // typed) locals rather than `self`. Swift 6 refuses an escaping closure that captures
+        // `self` from a struct init.
+        let session = DrivingSession(state: state, ble: ble, recorder: recorder)
+        self.session = session
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
         self.dataPorter = DataPorter(db: db, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore)
@@ -34,8 +38,10 @@ struct CairnCompanionApp: App {
             keyProvider = SoftwareKeyProvider()
         }
         let identityStore = KeychainIdentityStore()
-        enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
-        syncClient = TripSyncClient(enrolmentService: enrolmentService)
+        let enrolmentService = EnrolmentService(keyProvider: keyProvider, identityStore: identityStore)
+        self.enrolmentService = enrolmentService
+        let syncClient = TripSyncClient(enrolmentService: enrolmentService)
+        self.syncClient = syncClient
         outboxStore = GRDBOutboxStore(db: db)
         syncStateStore = GRDBSyncStateStore(db: db)
 
