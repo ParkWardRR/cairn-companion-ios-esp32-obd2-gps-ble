@@ -192,6 +192,14 @@ public final class TripSyncClient {
         return nil
     }
 
+    /// A signed client for the enrolled phone on whichever route answers (LAN first, then Tailnet),
+    /// or nil with the reason when there is none. Used by the bundle offload, which shares this
+    /// phone's identity and routes with the History sync.
+    public func makeServerClient() async -> (client: CairnServerClient, route: Route)? {
+        guard let (baseURL, route) = await resolveBaseURL(), let signer = await enrolmentService?.makeSigner() else { return nil }
+        return (CairnServerClient(transport: URLSessionTransport(baseURL: baseURL), signer: signer), route)
+    }
+
     // MARK: - Snapshot Cache
 
     public func loadCachedSnapshot() async {

@@ -25,6 +25,12 @@ public enum CairnGATTProfile {
     public static var obdLive: CBUUID { uuid(suffix: "0020") }
     public static var deviceStatus: CBUUID { uuid(suffix: "0021") }
 
+    /// Bundle offload (contracts/ble/v1/offload.md). Present only when `PROTOCOL_VERSION`
+    /// capability bit 2 is set. CONTROL: write with response, indicate. DATA: notify, and write
+    /// without response for the receipt.
+    public static var offloadControl: CBUUID { uuid(suffix: "0030") }
+    public static var offloadData: CBUUID { uuid(suffix: "0031") }
+
     /// Device information (read-once per connection). Only present when `PROTOCOL_VERSION`
     /// capability bit 3 is set; the payload parses via `parseDeviceInfo`. See
     /// `contracts/ble/v1/device-info.md`.

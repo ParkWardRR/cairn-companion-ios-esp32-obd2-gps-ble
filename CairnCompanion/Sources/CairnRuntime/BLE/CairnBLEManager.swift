@@ -26,6 +26,11 @@ public final class CairnBLEManager: NSObject {
     private var deviceInfoCharacteristic: CBCharacteristic?
     private var obdCharacteristic: CBCharacteristic?
     private var deviceStatusCharacteristic: CBCharacteristic?
+    private var offloadControlCharacteristic: CBCharacteristic?
+    private var offloadDataCharacteristic: CBCharacteristic?
+    /// `PROTOCOL_VERSION` capability bit 2, from this connection's read.
+    private var offloadAdvertised = false
+    private var offloadLink: CoreBluetoothOffloadLink?
     /// The last parsed `DEVICE_INFO` value read from the connected dongle. `nil` until the
     /// dongle sets capability bit 3 and the read lands.
     public private(set) var lastDeviceInfo: DeviceInfo?
@@ -111,7 +116,32 @@ public final class CairnBLEManager: NSObject {
         trace("forgot dongle")
     }
 
+    /// True when the dongle says it can offload bundles and exposes both characteristics.
+    public var supportsBundleOffload: Bool {
+        offloadAdvertised && offloadControlCharacteristic != nil && offloadDataCharacteristic != nil
+    }
+
+    /// A fresh link to the dongle's offload characteristics, replacing any earlier one. Nil when
+    /// the dongle cannot offload or is not connected.
+    public func openOffloadLink() -> CoreBluetoothOffloadLink? {
+        guard state.connection == .ready, supportsBundleOffload, let peripheral,
+              let control = offloadControlCharacteristic, let data = offloadDataCharacteristic else { return nil }
+        offloadLink?.end()
+        let link = CoreBluetoothOffloadLink(peripheral: peripheral, control: control, data: data)
+        offloadLink = link
+        return link
+    }
+
+    public func closeOffloadLink() {
+        offloadLink?.end()
+        offloadLink = nil
+    }
+
     private func clearCharacteristics() {
+        closeOffloadLink()
+        offloadControlCharacteristic = nil
+        offloadDataCharacteristic = nil
+        offloadAdvertised = false
         fixCharacteristic = nil
         baroCharacteristic = nil
         engineDeclarationCharacteristic = nil
@@ -461,6 +491,8 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
         deviceInfoCharacteristic = found[CairnGATTProfile.deviceInfo]
         obdCharacteristic = found[CairnGATTProfile.obdLive]
         deviceStatusCharacteristic = found[CairnGATTProfile.deviceStatus]
+        offloadControlCharacteristic = found[CairnGATTProfile.offloadControl]
+        offloadDataCharacteristic = found[CairnGATTProfile.offloadData]
         // Every characteristic needs an encrypted, authenticated link; the first access prompts for the passkey.
         peripheral.readValue(for: version)
         for uuid in [CairnGATTProfile.gnssQuality, CairnGATTProfile.companionStatus,
@@ -471,6 +503,13 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
 
     public func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
         // Radio cleared after backpressure; the next 1 Hz write will go through.
+        offloadLink?.radioReady()
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        if characteristic.uuid == CairnGATTProfile.offloadControl {
+            offloadLink?.controlWriteFinished(error: error)
+        }
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
@@ -483,6 +522,11 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
     public func peripheral(
         _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?
     ) {
+        if characteristic.uuid == CairnGATTProfile.offloadControl || characteristic.uuid == CairnGATTProfile.offloadData {
+            // Offload traffic is too chatty to trace; a failure shows up as a timeout or a CRC miss.
+            if error == nil, let value = characteristic.value { offloadLink?.received(characteristic, value: value) }
+            return
+        }
         trace("value \(characteristic.uuid.uuidString) \(characteristic.value?.count ?? -1) B \(describe(error))")
         if let error {
             if characteristic.uuid == CairnGATTProfile.protocolVersion {
@@ -505,6 +549,13 @@ extension CairnBLEManager: @preconcurrency CBPeripheralDelegate {
         case CairnGATTProfile.protocolVersion:
             guard let version = PayloadDecoder.protocolVersion(data) else { return retry("Bad protocol version payload") }
             guard version.isSupported else { return fail("Unsupported protocol v\(version.version)") }
+            offloadAdvertised = version.hasBundleOffload
+            if version.hasBundleOffload {
+                // Indications and notifications arrive only once subscribed; both need the bond.
+                for c in [offloadControlCharacteristic, offloadDataCharacteristic].compactMap({ $0 }) {
+                    peripheral.setNotifyValue(true, for: c)
+                }
+            }
             becomeReady()
             // Bit 3 of the capabilities bitmap means DEVICE_INFO is present. Read it once per
             // connection (and once per RETURNED event when uplink events are wired in).

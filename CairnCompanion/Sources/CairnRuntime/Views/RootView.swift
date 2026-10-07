@@ -10,6 +10,7 @@ public struct RootView: View {
     private let syncClient: TripSyncClient
     private let dataPorter: DataPorter
     private let enrolmentService: EnrolmentService?
+    private let offload: OffloadController?
     @State private var showWelcome: Bool
     @State private var pendingLink: PendingLink?
     @State private var linkError: String?
@@ -19,7 +20,8 @@ public struct RootView: View {
         let link: ConfigureLink
     }
 
-    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
+    public init(session: DrivingSession, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil, offload: OffloadController? = nil) {
+        self.offload = offload
         self.session = session
         self.vehicleStore = vehicleStore
         self.maintenanceStore = maintenanceStore
@@ -74,7 +76,7 @@ public struct RootView: View {
                     .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
                 GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, recorder: session.recorder)
                     .tabItem { Label("Garage", systemImage: "building.2") }
-                SettingsView(session: session, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService)
+                SettingsView(session: session, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService, offload: offload)
                     .tabItem { Label("Settings", systemImage: "gear") }
             }
         }

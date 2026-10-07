@@ -36,7 +36,10 @@ public struct SettingsView: View {
     @State private var revokeTarget: ClientEntry?
     @State private var showRevokeConfirm = false
 
-    public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil) {
+    let offload: OffloadController?
+
+    public init(session: DrivingSession, syncClient: TripSyncClient, dataPorter: DataPorter, enrolmentService: EnrolmentService? = nil, offload: OffloadController? = nil) {
+        self.offload = offload
         self.session = session
         self.syncClient = syncClient
         self.dataPorter = dataPorter
@@ -53,6 +56,9 @@ public struct SettingsView: View {
                     adminSection
                 }
                 bluetoothSection
+                if let offload {
+                    OffloadSection(offload: offload)
+                }
                 serverSection
                 if syncClient.hasServer {
                     diagnosticsSection
@@ -817,3 +823,59 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 #endif
+
+
+/// "Trips on the dongle": what the phone is carrying to the server, and a button to do it now.
+private struct OffloadSection: View {
+    let offload: OffloadController
+
+    var body: some View {
+        Section {
+            HStack(spacing: 12) {
+                icon
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(headline).font(.subheadline.weight(.semibold))
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if offload.isRunning, let p = offload.progress, case .uploading(let chunk, let total) = p.phase {
+                ProgressView(value: Double(chunk), total: Double(max(total, 1)))
+            }
+            Button {
+                offload.offloadNow()
+            } label: {
+                Label(offload.isRunning ? "Carrying trips…" : "Offload trips now", systemImage: "arrow.down.circle")
+            }
+            .disabled(offload.isRunning || !offload.canOffload)
+        } header: {
+            Text("Trips on the dongle")
+        } footer: {
+            Text("The dongle keeps each trip until the server confirms it has it. If the dongle uploads some trips on its own, the phone only carries what is left.")
+        }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        switch offload.status {
+        case .running: Image(systemName: "arrow.triangle.2.circlepath").foregroundStyle(.blue)
+        case .finished: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+        case .needsAttention: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+        case .idle: Image(systemName: "externaldrive").foregroundStyle(.secondary)
+        }
+    }
+
+    private var headline: String {
+        switch offload.status {
+        case .idle: offload.canOffload ? "Ready to carry trips" : "Not connected"
+        case .running(let text), .finished(let text), .needsAttention(let text): text
+        }
+    }
+
+    private var detail: String {
+        if !offload.canOffload && offload.status == .idle {
+            return "Connect to the dongle with the server set up to carry its trips."
+        }
+        guard let when = offload.lastRunAt else { return "Hasn't run yet." }
+        return "Last run \(when.formatted(.relative(presentation: .named)))."
+    }
+}

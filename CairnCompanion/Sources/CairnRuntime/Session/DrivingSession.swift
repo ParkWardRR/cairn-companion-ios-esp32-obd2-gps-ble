@@ -28,12 +28,22 @@ public final class DrivingSession {
     private var throttle = TransmitThrottle()
     private var seq: UInt16 = 0
 
+    /// The dongle link became usable / went away. The bundle offload hangs off these.
+    public var onDongleReady: (() -> Void)?
+    public var onDongleLost: (() -> Void)?
+
     public init(state: SessionState, ble: CairnBLEManager, recorder: DriveRecorder) {
         self.state = state
         self.ble = ble
         self.recorder = recorder
-        ble.onReady = { [weak self] in self?.beginDriving() }
-        ble.onLinkLost = { [weak self] in self?.endDriving() }
+        ble.onReady = { [weak self] in
+            self?.beginDriving()
+            self?.onDongleReady?()
+        }
+        ble.onLinkLost = { [weak self] in
+            self?.endDriving()
+            self?.onDongleLost?()
+        }
         ble.onStatus = { [weak self] status in self?.recorder.recordStatus(status) }
         ble.onStreamingChanged = { [weak self] streaming in self?.recorder.recordStreamingChange(isStreaming: streaming) }
         ble.onOBDReceived = { [weak self] in
