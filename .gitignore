@@ -9,3 +9,4 @@ Local.xcconfig
 .nimbalyst/
 nimbalyst-local/
 /.contracts/
+build/

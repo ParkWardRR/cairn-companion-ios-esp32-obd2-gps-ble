@@ -52,7 +52,8 @@ struct CairnCompanionApp: App {
         }
         #endif
         session.resumeIfEnabled()
-        Task { await syncClient.loadCachedSnapshot() }
+        let client = syncClient
+        Task { await client.loadCachedSnapshot() }
         if syncClient.isStale { syncClient.sync() }
     }
 
