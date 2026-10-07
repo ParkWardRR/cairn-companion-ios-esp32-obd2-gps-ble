@@ -5,11 +5,13 @@ enum SnapshotArchive {
     enum ArchiveError: Error, LocalizedError {
         case manifestMissing
         case unsupportedSchema(Int)
+        case serverNewerThanApp(Int)
 
         var errorDescription: String? {
             switch self {
             case .manifestMissing: "Snapshot archive missing manifest.json"
             case .unsupportedSchema(let v): "Unsupported snapshot schema version \(v)"
+            case .serverNewerThanApp(let v): "The server sent a newer snapshot format (schema \(v)). Update Cairn from TestFlight."
             }
         }
     }
@@ -41,7 +43,11 @@ enum SnapshotArchive {
         }
 
         guard let manifest else { throw ArchiveError.manifestMissing }
-        guard manifest.isSupported else { throw ArchiveError.unsupportedSchema(manifest.schemaVersion) }
+        guard manifest.isSupported else {
+            throw manifest.isNewerThanSupported
+                ? ArchiveError.serverNewerThanApp(manifest.schemaVersion)
+                : ArchiveError.unsupportedSchema(manifest.schemaVersion)
+        }
 
         return ExtractedSnapshot(manifest: manifest, parquetDir: parquetDir)
     }
