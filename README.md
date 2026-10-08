@@ -31,7 +31,7 @@
 
 ## In plain language
 
-Cairn is a small ESP32 dongle in the car's OBD-II port. It records every drive (position, speed, engine data) to an SD card, **encrypted**, and has no Wi-Fi in the shipped firmware. Your server holds the trip history and the web dashboard shows it. Something has to carry data between the dongle and the server. That something is this app.
+Cairn is a small ESP32 dongle in the car's OBD-II port. It records every drive (position, speed, engine data) to an SD card, **encrypted**. Your server holds the trip history and the web dashboard shows it. Something has to carry data between the dongle and the server. That something is this app — and since 2026-10-07 the dongle can also carry trips itself over its own cellular link, which makes the phone the preferred path rather than the only one.
 
 The app does three jobs:
 
@@ -206,7 +206,9 @@ The 28-byte `GNSS_FIX` layout, sentinels, `fix_type` mapping, staleness rules (a
 
 > **Status: specified, and implemented on the firmware, on the server and in a Go reference client. The relay-path message codec, session and transfer checks landed in this app on 2026-10-06 (PR #32). The CoreBluetooth half is still open** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)). The server calls it needs (`relayOffer`, `relayChunk`, `relayCommit`, `relayReceipt`) are already in `CairnServerClient` and replayed against the server's recorded exchanges. The reference client (`cmd/cairn-phone` on macOS) **carried the first real over-the-air offload on 2026-10-06**: nine bundles in 62 s, nine receipts verified on the dongle and pruned. The app will replace it once #14 lands.
 
-In the shipped firmware the dongle has no Wi-Fi, no network stack and no server credential. A trip is sealed into a **bundle**: a manifest signed by the dongle's Ed25519 key plus encrypted segments (XChaCha20-Poly1305). The phone is the dongle's only way out.
+A trip is sealed into a **bundle**: a manifest signed by the dongle's Ed25519 key plus encrypted segments (XChaCha20-Poly1305).
+
+The phone used to be the dongle's only way out. Since 2026-10-07 the firmware also uploads bundles itself over **LTE**, so the phone is the preferred path — free, and already connected over BLE — rather than the only one. That changes nothing about this app's job or its security properties: the dongle still signs, the phone still cannot read or forge a bundle, and only a receipt signed by the server authorises deleting a trip from the card. It does mean a trip can reach the server without the phone, so the app should not assume it is the sole carrier. (Wi-Fi is implemented in the firmware but switched off in production, because it cannot associate while the BLE controller is up — see firmware issue #31.)
 
 | | The phone | The server | The dongle |
 |---|---|---|---|
