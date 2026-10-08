@@ -170,3 +170,27 @@ private func json(_ status: Int, _ text: String) -> HTTPResponse { HTTPResponse(
         }
     }
 }
+
+@Suite struct DashboardAddressTests {
+    @Test func theDashboardIsTheServersHostOnTheOrdinaryPort() {
+        #expect(DashboardAddress.url(forServer: "https://cairn.example.lan:8444")?.absoluteString == "https://cairn.example.lan")
+        #expect(DashboardAddress.url(forServer: "  https://cairn.example.lan/v1/x?y=1 ")?.absoluteString == "https://cairn.example.lan")
+        #expect(DashboardAddress.url(forServer: "https://cairn.example.lan")?.absoluteString == "https://cairn.example.lan")
+    }
+
+    @Test func saysWhyThereIsNoDashboardAddress() {
+        #expect(DashboardAddress.problem(forServer: "") == .noServer)
+        #expect(DashboardAddress.problem(forServer: "not a url") == .noServer)
+        #expect(DashboardAddress.problem(forServer: "http://cairn.example.lan") == .notHTTPS)
+        #expect(DashboardAddress.problem(forServer: "https://192.168.1.20:8444") == .ipAddress)
+        #expect(DashboardAddress.problem(forServer: "https://[fd7a:115c::1]:8444") == .ipAddress)
+        #expect(DashboardAddress.problem(forServer: "https://cairn.example.lan:8444") == nil)
+        #expect(DashboardAddress.url(forServer: "https://192.168.1.20") == nil)
+        for p in [DashboardAddress.Problem.noServer, .ipAddress, .notHTTPS] { #expect(DashboardAddress.words(for: p).count > 20) }
+    }
+
+    @Test func aHostThatLooksLikeNumbersButIsNotAnAddressIsAName() {
+        #expect(DashboardAddress.problem(forServer: "https://1.2.3.example.lan") == nil)
+        #expect(DashboardAddress.problem(forServer: "https://300.1.1.1") == nil) // not a valid address, so a (odd) name
+    }
+}

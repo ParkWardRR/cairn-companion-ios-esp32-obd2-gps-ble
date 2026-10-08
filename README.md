@@ -585,7 +585,7 @@ Related repositories: [front door and roadmap](https://github.com/ParkWardRR/cai
 
 ## Passkeys
 
-**Settings > Dashboard** signs this iPhone in to the web dashboard with a passkey, or makes one. It uses
+**Settings > Dashboard** (shown once a server is set up) signs this iPhone in to the web dashboard with a passkey, or makes one. It uses
 `AuthenticationServices` (`ASAuthorizationPlatformPublicKeyCredentialProvider`), Apple's own passkey API and the one
 Safari uses, so the passkey lives in iCloud Keychain, is unlocked with Face ID, and works in the app and in Safari
 alike. There is no password and no account in any cloud service.
@@ -609,7 +609,9 @@ Setting it up (the address is yours and is never committed):
    to the domain, turn on **Settings > Developer > Associated Domains Development** on the phone, and use a
    development-signed build: iOS then fetches the file from the device itself. A TestFlight or App Store build needs
    the dashboard reachable from the internet instead.
-4. The address typed in Settings must be the same host (`https://` only): a passkey belongs to one site.
+4. There is no separate dashboard address to type: it is the server address from Settings with the port dropped
+   (`https://cairn.example.lan:8444` gives `https://cairn.example.lan`), because a passkey belongs to one host name. The
+   server has to be set up by name, not by IP address, for passkeys to work.
 
 What cannot be checked without a phone: the system passkey sheet itself. The simulator build compiles and runs, the
 conversion to and from the dashboard's JSON is unit-tested, and the dashboard side is exercised end to end by its

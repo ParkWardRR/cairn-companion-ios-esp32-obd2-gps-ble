@@ -60,7 +60,7 @@ public struct SettingsView: View {
                 if enrolledIdentity?.isAdmin == true {
                     adminSection
                 }
-                dashboardSection
+                if syncClient.hasServer { dashboardSection }
                 fuelSection
                 bluetoothSection
                 if let offload {
@@ -155,15 +155,6 @@ public struct SettingsView: View {
 
     private var dashboardSection: some View {
         Section {
-            TextField("https://cairn.example.lan", text: $dashboard.urlText)
-                .textContentType(.URL)
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                .keyboardType(.URL)
-                #endif
-                .onSubmit { Task { await dashboard.refresh() } }
-
             Label(dashboardStatusText, systemImage: dashboardStatusSymbol)
                 .font(.subheadline)
                 .foregroundStyle(dashboardStatusTone.color)
@@ -196,9 +187,12 @@ public struct SettingsView: View {
         } header: {
             Text("Dashboard")
         } footer: {
-            Text("A passkey is your iPhone's own sign-in: Face ID, kept in iCloud Keychain, and the same one Safari uses for the dashboard. On your tailnet, the dashboard already knows this phone and needs no sign-in.")
+            Text("The dashboard is the web page on your server's address. A passkey is your iPhone's own sign-in: Face ID, kept in iCloud Keychain, and the same one Safari uses there. On your tailnet, the dashboard already knows this phone and needs no sign-in.")
         }
-        .task { await dashboard.refresh() }
+        .task(id: syncClient.lanURL) {
+            dashboard.serverURL = syncClient.lanURL
+            await dashboard.refresh()
+        }
         #if os(iOS)
         .sheet(isPresented: $showDashboard) {
             if let url = dashboard.url { DashboardSheet(url: url, cookies: dashboard.sessionCookies) }
@@ -219,7 +213,7 @@ public struct SettingsView: View {
 
     private var dashboardStatusText: String {
         switch dashboard.status {
-        case .unset: "Enter the dashboard's address."
+        case .unset: dashboard.addressProblem ?? "Checking\u{2026}"
         case .checking: "Checking\u{2026}"
         case .signedOut(let passkeys): passkeys == 0 ? "No passkey exists yet." : "Not signed in."
         case .signedIn(let viaTailnet, _, _): viaTailnet ? "Signed in: this phone is on your tailnet." : "Signed in with a passkey."
@@ -550,7 +544,7 @@ public struct SettingsView: View {
         if syncClient.hasServer || showServerSetup {
             Section {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("LAN")
+                    Text("Server address")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                     TextField("https://cairn.example.lan", text: $lanURL)
@@ -565,7 +559,7 @@ public struct SettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Tailnet")
+                    Text("Tailscale address (optional)")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                     TextField("https://cairn.ts.net", text: $tailnetURL)
@@ -596,7 +590,7 @@ public struct SettingsView: View {
             } header: {
                 Text("Cairn Server")
             } footer: {
-                Text("The LAN URL is tried first. If unreachable, the Tailnet URL is used as fallback. Both must point to the same server instance.")
+                Text("One server, so one address. The Tailscale address is only for when you are away from home: it is used when the first one cannot be reached. A setup QR code fills both in for you.")
             }
         } else {
             Section {

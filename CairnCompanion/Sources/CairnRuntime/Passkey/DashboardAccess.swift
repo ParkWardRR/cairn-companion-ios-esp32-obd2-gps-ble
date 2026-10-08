@@ -3,7 +3,8 @@ import Foundation
 import Observation
 
 /// The phone's way into the dashboard: its address, whether it is signed in, and the passkey sign-in
-/// and creation that gets it there. The address lives in UserDefaults only, never in the repository.
+/// and creation that gets it there. Its address is not a setting: it is the server address the phone already
+/// has (`DashboardAddress`), so there is one address to keep right, not two.
 @MainActor @Observable
 public final class DashboardAccess {
     public enum Status: Equatable {
@@ -14,11 +15,8 @@ public final class DashboardAccess {
         case unreachable
     }
 
-    public static let urlKey = "cairn.dashboardURL"
-
-    public var urlText: String {
-        didSet { UserDefaults.standard.set(urlText, forKey: Self.urlKey) }
-    }
+    /// The server address (the LAN one) the dashboard's is derived from.
+    public var serverURL: String = ""
     public private(set) var status: Status = .unset
     public private(set) var busy = false
     public private(set) var message: String?
@@ -32,7 +30,8 @@ public final class DashboardAccess {
     #endif
 
     public init() {
-        urlText = UserDefaults.standard.string(forKey: Self.urlKey) ?? ""
+        // an earlier build asked for a separate dashboard address; there is none now
+        UserDefaults.standard.removeObject(forKey: "cairn.dashboardURL")
         // The shared store keeps the 30-day session cookie across launches; only this host's are read or removed.
         let storage = HTTPCookieStorage.shared
         let configuration = URLSessionConfiguration.default
@@ -44,12 +43,11 @@ public final class DashboardAccess {
         urlSession = URLSession(configuration: configuration)
     }
 
-    /// The address as a URL, only if it is one a passkey could work for: https, with a host.
-    public var url: URL? {
-        let trimmed = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)"),
-              url.scheme == "https", let host = url.host, !host.isEmpty else { return nil }
-        return url
+    public var url: URL? { DashboardAddress.url(forServer: serverURL) }
+
+    /// Why there is no dashboard address, in words; nil when there is one.
+    public var addressProblem: String? {
+        DashboardAddress.problem(forServer: serverURL).map(DashboardAddress.words(for:))
     }
 
     private var client: DashboardAuthClient? {
