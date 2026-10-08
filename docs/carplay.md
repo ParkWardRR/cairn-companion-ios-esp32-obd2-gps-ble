@@ -113,8 +113,29 @@ with `xcodebuild -allowProvisioningUpdates` enables it and regenerates the profi
 at [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list)
 → the App ID → Additional Capabilities → **CarPlay Driving Task App**.
 
-**The distribution profile is a separate job.** The team store profile predates the capability, so an
-App Store build would ship without it. Archive once with `-allowProvisioningUpdates` to regenerate.
+**Distribution is done too**, verified on 2026-10-08 by exporting an `app-store-connect` build and
+reading the entitlement back out of the shipped binary:
+
+```
+Authority=Apple Distribution: Twesh Deshetty (6U62M4232W)
+  "com.apple.developer.carplay-driving-task" => true
+  "get-task-allow" => false
+```
+
+Worth knowing if this ever needs redoing: **`xcodebuild archive` alone is not enough.** It signs with
+the *development* profile, so the archive proves nothing about distribution. The store profile is only
+resolved at `-exportArchive`:
+
+```bash
+xcodebuild archive -scheme CairnCompanion -destination 'generic/platform=iOS' \
+  -archivePath <path>.xcarchive -allowProvisioningUpdates
+xcodebuild -exportArchive -archivePath <path>.xcarchive -exportPath <dir> \
+  -exportOptionsPlist <opts> -allowProvisioningUpdates
+```
+
+Use a copy of `ExportOptions.plist` with `destination` set to `export` rather than `upload` unless
+you actually mean to ship to App Store Connect. Xcode signs this with a *cloud-managed* distribution
+certificate, so no distribution private key is created on the machine.
 
 Simulator builds never carry it: iOS strips the entitlement for the simulator. The CarPlay scene
 still connects there, so the simulator remains the right place to check layout.
