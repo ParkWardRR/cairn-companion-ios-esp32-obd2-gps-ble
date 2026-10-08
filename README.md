@@ -609,9 +609,10 @@ Setting it up (the address is yours and is never committed):
    to the domain, turn on **Settings > Developer > Associated Domains Development** on the phone, and use a
    development-signed build: iOS then fetches the file from the device itself. A TestFlight or App Store build needs
    the dashboard reachable from the internet instead.
-4. There is no separate dashboard address to type: it is the server address from Settings with the port dropped
-   (`https://cairn.example.lan:8444` gives `https://cairn.example.lan`), because a passkey belongs to one host name. The
-   server has to be set up by name, not by IP address, for passkeys to work.
+4. By default there is no dashboard address to type: **Same address as the server** is on, and the dashboard is the server
+   address from Settings with the port dropped (`https://cairn.example.lan:8444` gives `https://cairn.example.lan`),
+   because a passkey belongs to one host name. If your dashboard is on a different name, turn that off and type its
+   address. Either way it has to be a host name, not an IP address, for passkeys to work.
 
 What cannot be checked without a phone: the system passkey sheet itself. The simulator build compiles and runs, the
 conversion to and from the dashboard's JSON is unit-tested, and the dashboard side is exercised end to end by its

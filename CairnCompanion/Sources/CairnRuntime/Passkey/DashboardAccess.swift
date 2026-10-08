@@ -3,8 +3,8 @@ import Foundation
 import Observation
 
 /// The phone's way into the dashboard: its address, whether it is signed in, and the passkey sign-in
-/// and creation that gets it there. Its address is not a setting: it is the server address the phone already
-/// has (`DashboardAddress`), so there is one address to keep right, not two.
+/// and creation that gets it there. Its address is the server address's host unless the owner says the
+/// dashboard is elsewhere and types it (`DashboardAddress`).
 @MainActor @Observable
 public final class DashboardAccess {
     public enum Status: Equatable {
@@ -15,8 +15,18 @@ public final class DashboardAccess {
         case unreachable
     }
 
+    public static let sameHostKey = "cairn.dashboardSameHost"
+    public static let typedURLKey = "cairn.dashboardURL"
+
     /// The server address (the LAN one) the dashboard's is derived from.
     public var serverURL: String = ""
+    /// On by default: the dashboard is on the server's host name. Off, the address typed below is used.
+    public var sameHost: Bool {
+        didSet { UserDefaults.standard.set(sameHost, forKey: Self.sameHostKey) }
+    }
+    public var typedURL: String {
+        didSet { UserDefaults.standard.set(typedURL, forKey: Self.typedURLKey) }
+    }
     public private(set) var status: Status = .unset
     public private(set) var busy = false
     public private(set) var message: String?
@@ -30,8 +40,8 @@ public final class DashboardAccess {
     #endif
 
     public init() {
-        // an earlier build asked for a separate dashboard address; there is none now
-        UserDefaults.standard.removeObject(forKey: "cairn.dashboardURL")
+        sameHost = UserDefaults.standard.object(forKey: Self.sameHostKey) as? Bool ?? true
+        typedURL = UserDefaults.standard.string(forKey: Self.typedURLKey) ?? ""
         // The shared store keeps the 30-day session cookie across launches; only this host's are read or removed.
         let storage = HTTPCookieStorage.shared
         let configuration = URLSessionConfiguration.default
@@ -43,11 +53,11 @@ public final class DashboardAccess {
         urlSession = URLSession(configuration: configuration)
     }
 
-    public var url: URL? { DashboardAddress.url(forServer: serverURL) }
+    public var url: URL? { DashboardAddress.url(forServer: serverURL, sameHost: sameHost, typed: typedURL) }
 
     /// Why there is no dashboard address, in words; nil when there is one.
     public var addressProblem: String? {
-        DashboardAddress.problem(forServer: serverURL).map(DashboardAddress.words(for:))
+        DashboardAddress.problem(forServer: serverURL, sameHost: sameHost, typed: typedURL).map(DashboardAddress.words(for:))
     }
 
     private var client: DashboardAuthClient? {

@@ -194,3 +194,31 @@ private func json(_ status: Int, _ text: String) -> HTTPResponse { HTTPResponse(
         #expect(DashboardAddress.problem(forServer: "https://300.1.1.1") == nil) // not a valid address, so a (odd) name
     }
 }
+
+@Suite struct DashboardAddressChoiceTests {
+    @Test func theSameHostIsTheDefaultAndIgnoresWhatWasTyped() {
+        #expect(DashboardAddress.url(forServer: "https://cairn.example.lan:8444", sameHost: true, typed: "https://other.example")?.absoluteString == "https://cairn.example.lan")
+    }
+
+    @Test func aTypedAddressIsUsedAsTypedWithItsPort() {
+        #expect(DashboardAddress.url(forServer: "https://cairn.example.lan:8444", sameHost: false, typed: "https://dash.example.lan:3443/trips")?.absoluteString == "https://dash.example.lan:3443")
+        #expect(DashboardAddress.url(forServer: "", sameHost: false, typed: "dash.example.lan")?.absoluteString == "https://dash.example.lan")
+        #expect(DashboardAddress.url(forServer: "", sameHost: false, typed: "  dash.example.lan  ")?.absoluteString == "https://dash.example.lan")
+    }
+
+    @Test func aTypedAddressNeedsNoServer() {
+        #expect(DashboardAddress.problem(forServer: "", sameHost: false, typed: "dash.example.lan") == nil)
+    }
+
+    @Test func aTypedAddressIsChecked() {
+        #expect(DashboardAddress.problem(forServer: "https://a.example", sameHost: false, typed: "") == .noDashboardAddress)
+        #expect(DashboardAddress.problem(forServer: "https://a.example", sameHost: false, typed: "http://dash.example") == .notHTTPS)
+        #expect(DashboardAddress.problem(forServer: "https://a.example", sameHost: false, typed: "10.0.0.5") == .ipAddress)
+        #expect(DashboardAddress.url(forServer: "https://a.example", sameHost: false, typed: "10.0.0.5") == nil)
+        #expect(DashboardAddress.words(for: .noDashboardAddress).count > 10)
+    }
+
+    @Test func theSameHostStillNeedsAServer() {
+        #expect(DashboardAddress.problem(forServer: "", sameHost: true, typed: "dash.example.lan") == .noServer)
+    }
+}

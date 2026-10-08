@@ -155,6 +155,22 @@ public struct SettingsView: View {
 
     private var dashboardSection: some View {
         Section {
+            Toggle("Same address as the server", isOn: $dashboard.sameHost)
+                .onChange(of: dashboard.sameHost) { _, _ in Task { await dashboard.refresh() } }
+            if !dashboard.sameHost {
+                TextField("https://dashboard.example.lan", text: $dashboard.typedURL)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+                    .onSubmit { Task { await dashboard.refresh() } }
+            } else if let url = dashboard.url {
+                // what "the same" came to, so it can be checked at a glance
+                Text(url.absoluteString).font(.footnote).foregroundStyle(.secondary)
+            }
+
             Label(dashboardStatusText, systemImage: dashboardStatusSymbol)
                 .font(.subheadline)
                 .foregroundStyle(dashboardStatusTone.color)
@@ -187,7 +203,7 @@ public struct SettingsView: View {
         } header: {
             Text("Dashboard")
         } footer: {
-            Text("The dashboard is the web page on your server's address. A passkey is your iPhone's own sign-in: Face ID, kept in iCloud Keychain, and the same one Safari uses there. On your tailnet, the dashboard already knows this phone and needs no sign-in.")
+            Text("The dashboard is the web page for your server, normally on the same host name. A passkey is your iPhone's own sign-in: Face ID, kept in iCloud Keychain, and the same one Safari uses there. On your tailnet, the dashboard already knows this phone and needs no sign-in.")
         }
         .task(id: syncClient.lanURL) {
             dashboard.serverURL = syncClient.lanURL
