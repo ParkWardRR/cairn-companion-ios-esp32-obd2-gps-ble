@@ -45,6 +45,7 @@ struct RouteSketchShape: Shape {
 
 struct RouteSketch: View {
     let summary: TripSummary
+    var side: CGFloat = 64
 
     var body: some View {
         ZStack {
@@ -58,14 +59,14 @@ struct RouteSketch: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .frame(width: 64, height: 64)
+        .frame(width: side, height: side)
         .accessibilityHidden(true)
     }
 }
 
 // MARK: - Trip card
 
-/// One trip in the list: when, how long, how far, how fast, at a glance.
+/// One trip in the list as an overview: a small map of where it went, and the numbers beside it.
 struct TripCard: View {
     let summary: TripSummary
     let entry: HistoryEntry
@@ -75,19 +76,24 @@ struct TripCard: View {
     private var firstNote: String? { annotations.first { $0.kind == .note }?.text }
 
     var body: some View {
-        HStack(spacing: 12) {
-            RouteSketch(summary: summary)
-            VStack(alignment: .leading, spacing: 5) {
+        HStack(alignment: .top, spacing: 12) {
+            TripMapThumbnail(summary: summary)
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Text(summary.startedAt, style: .time).font(.headline)
                     if isFavorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow) }
                     Spacer(minLength: 4)
                     badges
                 }
-                HStack(spacing: 12) {
-                    stat(summary.distanceMeters.map(formatDistance) ?? "\u{2014}", "road")
-                    stat(formatTripDuration(summary.durationSeconds), "timer")
-                    if let top = summary.maxSpeedKph { stat("\(top) km/h", "speedometer") }
+                Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
+                    GridRow {
+                        stat(summary.distanceMeters.map(formatDistance), "Distance")
+                        stat(formatTripDuration(summary.durationSeconds), "Duration")
+                    }
+                    GridRow {
+                        stat(summary.fuel.map { String(format: "%.1f mpg", $0.tripMpg) }, "Economy")
+                        stat(summary.averageSpeedKph.map { "\($0) km/h" } ?? summary.maxSpeedKph.map { "\($0) top" }, summary.averageSpeedKph == nil ? "Speed" : "Average")
+                    }
                 }
                 if let sync = entry.syncLabel {
                     Text(sync).font(.caption).foregroundStyle(.orange)
@@ -102,13 +108,16 @@ struct TripCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func stat(_ text: String, _ symbol: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbol).imageScale(.small)
-            Text(text).lineLimit(1)
+    /// A figure over its label; a dash when there is no figure to give.
+    private func stat(_ value: String?, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value ?? "\u{2014}")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(value == nil ? .tertiary : .primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label).font(.caption2).foregroundStyle(.secondary)
         }
-        .font(.caption.monospacedDigit())
-        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -154,21 +163,15 @@ struct TripDayHeader: View {
 
 // MARK: - Route map
 
-/// The phone's track on a real map with its start and end marked.
+/// The route on a real map with its start and end marked.
 struct TripRouteMap: View {
-    let session: DriveSession
-
-    private var runs: [[CLLocationCoordinate2D]] {
-        TripSummary.usableTrack(session).map { run in
-            run.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-        }.filter { $0.count >= 2 }
-    }
+    let runs: [[RoutePoint]]
 
     var body: some View {
-        let runs = runs
-        if let first = runs.first?.first, let last = runs.last?.last {
+        let coordinates = runs.map { run in run.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) } }
+        if let first = coordinates.first?.first, let last = coordinates.last?.last {
             Map(initialPosition: .automatic, interactionModes: [.pan, .zoom]) {
-                ForEach(Array(runs.enumerated()), id: \.offset) { _, run in
+                ForEach(Array(coordinates.enumerated()), id: \.offset) { _, run in
                     MapPolyline(coordinates: run)
                         .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }

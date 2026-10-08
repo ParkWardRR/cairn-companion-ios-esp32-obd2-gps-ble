@@ -25,7 +25,7 @@ SPM multi-target inside `CairnCompanion/`:
 
 ### Tab structure (4 tabs)
 1. **Drive** (`MainView`) — live BLE session, connection status, GPS/OBD cards
-2. **Trips** (`TripsView`) — trips grouped by day, each a card with a route sketch, distance, duration and top speed (`TripSummary` in CairnCore); tap one for the route map, headline numbers, then the phone and server detail and notes
+2. **Trips** (`TripsView`) — trips grouped by day, each an overview card: small map (`TripMapThumbnail`, MapKit snapshot over a route sketch), distance, duration, estimated mpg and average speed (`TripSummary` and `FuelEstimate` in CairnCore; the server snapshot's `position`, `obd` and `boost` tables feed distance, route and fuel samples); tap one for the route map, headline numbers, then the phone and server detail and notes
 3. **Garage** (`GarageView` → `VehicleProfileView`) — vehicle cards, maintenance, odometer
 4. **Settings** (`SettingsView`) — server URL, dashboard passkeys (`Passkey/`: `AuthenticationServices` sign-in and creation, in-app dashboard), sync status, danger zone
 

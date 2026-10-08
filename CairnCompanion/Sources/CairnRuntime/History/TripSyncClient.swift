@@ -227,6 +227,13 @@ public final class TripSyncClient {
         cachedSnapshots
     }
 
+    #if DEBUG
+    /// Screenshots in the simulator: stand-in server trips, as the snapshot would have produced them.
+    public func injectDemoTrips(_ trips: [TripSnapshot]) {
+        cachedSnapshots = trips
+    }
+    #endif
+
     // MARK: - Sync
 
     public func sync() {

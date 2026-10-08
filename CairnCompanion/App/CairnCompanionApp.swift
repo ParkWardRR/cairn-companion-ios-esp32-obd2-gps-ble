@@ -51,7 +51,10 @@ struct CairnCompanionApp: App {
         CairnCarPlayLink.shared.attach(state: state, deviceInfo: { ble.lastDeviceInfo })
 
         #if DEBUG
-        if DemoMode.seedsTrips { Task { await DemoMode.seedTrips(into: driveStore) } }
+        if DemoMode.seedsTrips {
+            Task { await DemoMode.seedTrips(into: driveStore) }
+            syncClient.injectDemoTrips(DemoMode.demoServerTrips())
+        }
         if let scenario = DemoMode.scenario {
             DemoMode.apply(scenario, to: state)
             return

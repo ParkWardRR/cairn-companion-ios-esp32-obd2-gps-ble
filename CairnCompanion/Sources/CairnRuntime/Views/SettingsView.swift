@@ -39,6 +39,7 @@ public struct SettingsView: View {
     @State private var showDashboard = false
     @State private var showDashboardCode = false
     @State private var dashboardCode = ""
+    @AppStorage(FuelEstimate.ethanolKey) private var ethanol = FuelEstimate.defaultEthanolPercent
 
     let offload: OffloadController?
 
@@ -60,6 +61,7 @@ public struct SettingsView: View {
                     adminSection
                 }
                 dashboardSection
+                fuelSection
                 bluetoothSection
                 if let offload {
                     OffloadSection(offload: offload)
@@ -128,6 +130,24 @@ public struct SettingsView: View {
                 }
             }
             #endif
+        }
+    }
+
+    // MARK: - Fuel
+
+    private var fuelSection: some View {
+        Section {
+            Stepper(value: $ethanol, in: 0...85) {
+                HStack {
+                    Text("Ethanol blend")
+                    Spacer()
+                    Text("E\(ethanol)").foregroundStyle(.secondary).monospacedDigit()
+                }
+            }
+        } header: {
+            Text("Fuel")
+        } footer: {
+            Text("What is in the tank, for the economy shown on each trip. The car's fuel rate is not read, so economy is estimated from airflow, and the blend changes the estimate.")
         }
     }
 

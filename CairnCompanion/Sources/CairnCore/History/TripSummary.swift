@@ -6,7 +6,7 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
     public let id: String
     public let startedAt: Date
     public let durationSeconds: TimeInterval
-    /// Metres along the phone's recorded track; nil when the phone has no usable track.
+    /// Metres driven: along the dongle's GNSS track when the server has the trip, else the phone's own track.
     public let distanceMeters: Double?
     public let maxSpeedKph: Int?
     public let averageSpeedKph: Int?
@@ -14,6 +14,13 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
     public let isLive: Bool
     /// Normalised 0...1 points (x east, y north) for a map-free sketch of the route, thinned.
     public let routeSketch: [SketchPoint]
+    /// The route as runs of places (a run ends at a dropout), for drawing on a map. The dongle's when the
+    /// server has it, else the phone's.
+    public let routeRuns: [[RoutePoint]]
+    /// Fuel economy estimated from the dongle's MAF samples; nil without enough of them.
+    public let fuel: FuelEstimate?
+    /// Gallons burned over the distance, at that economy.
+    public let fuelGallons: Double?
 
     public struct SketchPoint: Sendable, Equatable {
         public let x: Double
@@ -26,7 +33,7 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
     static let maxImpliedMps = 56.0
     static let sketchPointLimit = 80
 
-    public init(entry: HistoryEntry) {
+    public init(entry: HistoryEntry, ethanolPercent: Int = FuelEstimate.defaultEthanolPercent) {
         let session = entry.phoneSession
         let trip = entry.serverTrip
         self.id = entry.id
@@ -42,9 +49,16 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
         }
 
         let usable = Self.usableTrack(session)
-        let distance = Self.distance(of: usable)
+        let phoneRuns = usable.map { $0.map { RoutePoint(latitude: $0.latitude, longitude: $0.longitude) } }
+        let serverRoute = trip?.route ?? []
+        let runs = serverRoute.count >= 2 ? [serverRoute] : phoneRuns.filter { $0.count >= 2 }
+        self.routeRuns = runs
+        self.routeSketch = Self.sketch(of: runs.flatMap { $0 })
+
+        // the dongle's GNSS distance when the server has one worth trusting, else what the phone drove
+        let serverDistance = trip?.distanceMeters.flatMap { $0 > 50 ? $0 : nil }
+        let distance = serverDistance ?? Self.distance(of: usable)
         self.distanceMeters = distance
-        self.routeSketch = Self.sketch(of: usable.flatMap { $0 })
 
         let trackMax = usable.flatMap { $0 }.compactMap { $0.speed >= 0 ? $0.speed * 3.6 : nil }.max()
         if let kph = trip?.maxSpeedKph {
@@ -58,6 +72,10 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
         } else {
             self.averageSpeedKph = nil
         }
+
+        let estimate = trip.flatMap { FuelEstimate(samples: $0.fuelSamples, ethanolPercent: ethanolPercent) }
+        self.fuel = estimate
+        self.fuelGallons = distance.flatMap { estimate?.gallons(overMeters: $0) }
     }
 
     // MARK: - Track maths
@@ -102,7 +120,7 @@ public struct TripSummary: Identifiable, Sendable, Equatable {
         return 2 * r * asin(min(1, sqrt(h)))
     }
 
-    static func sketch(of points: [TrackPoint]) -> [SketchPoint] {
+    static func sketch(of points: [RoutePoint]) -> [SketchPoint] {
         guard points.count >= 2 else { return [] }
         let stride = max(1, points.count / sketchPointLimit)
         let thinned = points.enumerated().filter { $0.offset % stride == 0 || $0.offset == points.count - 1 }.map(\.element)

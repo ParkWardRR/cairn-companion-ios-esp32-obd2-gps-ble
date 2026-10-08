@@ -19,9 +19,10 @@ enum DemoMode {
         let now = Date()
         // (hours ago, minutes long, loop radius in degrees, bench?)
         let drives: [(Double, Double, Double, Bool)] = [(2, 24, 0.020, false), (5, 11, 0.008, false), (27, 52, 0.045, false), (30, 1, 0, true), (52, 33, 0.030, false)]
-        for (hoursAgo, minutes, radius, bench) in drives {
+        for (i, (hoursAgo, minutes, radius, bench)) in drives.enumerated() {
             let start = now.addingTimeInterval(-hoursAgo * 3600)
-            var s = DriveSession(startedAt: start)
+            // fixed ids, so launching again replaces these instead of piling up more
+            var s = DriveSession(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", i + 1))!, startedAt: start)
             s.lifecycle = .closed
             s.closedAt = start.addingTimeInterval(minutes * 60)
             s.obdReceived = !bench
@@ -37,6 +38,25 @@ enum DemoMode {
                 return TrackPoint(fix: PhoneGNSSFix(latitude: lat, longitude: lon, ellipsoidalAltitude: 30, horizontalAccuracy: 6, verticalAccuracy: 8, speed: 13 + 6 * sin(a * 2), course: 0, timestamp: start.addingTimeInterval(Double(i) * 5)))
             }
             try? await store.save(s)
+        }
+    }
+
+    /// Server trips as the snapshot would hold them: a route, the dongle's distance and fuel samples.
+    static func demoServerTrips() -> [TripSnapshot] {
+        let now = Date()
+        // (hours ago, minutes, loop radius in degrees, airflow in cg/s, speed kph)
+        let drives: [(Double, Double, Double, Double, Double)] = [(3, 38, 0.030, 1900, 82), (7, 14, 0.010, 1300, 55), (29, 61, 0.055, 2300, 96), (53, 26, 0.020, 1500, 64)]
+        return drives.enumerated().map { i, d in
+            let (hoursAgo, minutes, radius, maf, kph) = d
+            let start = now.addingTimeInterval(-hoursAgo * 3600)
+            var trip = TripSnapshot(id: "demo-\(i)", startedAt: start, endedAt: start.addingTimeInterval(minutes * 60), durationSeconds: minutes * 60, maxSpeedKph: Int(kph * 1.35), maxRpm: 4200, obdSamples: 900, gnssSamples: 700, fixSamples: 700)
+            trip.distanceMeters = kph / 3.6 * minutes * 60 * 0.8
+            trip.route = (0..<90).map { j in
+                let a = Double(j) / 90 * 2 * .pi + Double(i)
+                return RoutePoint(latitude: 37.36 + radius * sin(a) * (1 + 0.3 * cos(2 * a)), longitude: -122.04 + radius * 1.4 * cos(a) * (1 + 0.2 * sin(3 * a)))
+            }
+            trip.fuelSamples = (0..<24).map { j in FuelSample(speedKph: kph + Double(j % 5) * 3, mafCgps: maf + Double(j % 7) * 40, lambda: 1.0) }
+            return trip
         }
     }
 

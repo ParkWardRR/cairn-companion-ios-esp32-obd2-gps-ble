@@ -101,3 +101,55 @@ private func session(track: [TrackPoint], duration: TimeInterval = 120) -> Drive
         #expect(days[0].trips[0].startedAt > days[0].trips[1].startedAt)
     }
 }
+
+@Suite struct TripSummaryServerTests {
+    private func trip(distance: Double? = nil, route: [RoutePoint] = [], fuel: [FuelSample] = []) -> TripSnapshot {
+        var t = TripSnapshot(id: "boot", startedAt: t0, endedAt: t0.addingTimeInterval(600), durationSeconds: 600, maxSpeedKph: 100)
+        t.distanceMeters = distance
+        t.route = route
+        t.fuelSamples = fuel
+        return t
+    }
+    private let samples = Array(repeating: FuelSample(speedKph: 100, mafCgps: 1500, lambda: 1.0), count: 6)
+
+    @Test func theDongleDistanceBeatsThePhonesWhenItHasOne() throws {
+        let entry = HistoryEntry(phoneSession: session(track: northbound(count: 101)), serverTrip: trip(distance: 9_000))
+        #expect(TripSummary(entry: entry).distanceMeters == 9_000)
+        // average speed follows: 9 km in 10 minutes
+        #expect(TripSummary(entry: entry).averageSpeedKph == 54)
+    }
+
+    @Test func aBogusServerDistanceFallsBackToThePhone() throws {
+        let entry = HistoryEntry(phoneSession: session(track: northbound(count: 101)), serverTrip: trip(distance: 3))
+        let metres = try #require(TripSummary(entry: entry).distanceMeters)
+        #expect(abs(metres - 1112) < 20)
+    }
+
+    @Test func aServerOnlyTripGetsItsRouteAndDistance() {
+        let route = (0..<20).map { RoutePoint(latitude: 37 + Double($0) * 0.001, longitude: -122) }
+        let s = TripSummary(entry: HistoryEntry(serverTrip: trip(distance: 2_000, route: route)))
+        #expect(s.distanceMeters == 2_000)
+        #expect(s.routeRuns.count == 1 && s.routeRuns[0].count == 20)
+        #expect(s.routeSketch.count >= 2)
+    }
+
+    @Test func fuelEconomyComesFromTheServerTripsSamples() throws {
+        let s = TripSummary(entry: HistoryEntry(serverTrip: trip(distance: 10_000, fuel: samples)))
+        let mpg = try #require(s.fuel?.tripMpg)
+        #expect(abs(mpg - 41.89) < 0.05)
+        // 10 km is 6.21 mi: 6.21 / 41.89 gal
+        #expect(abs(try #require(s.fuelGallons) - 0.1483) < 0.002)
+    }
+
+    @Test func theEthanolSettingChangesTheEstimate() throws {
+        let entry = HistoryEntry(serverTrip: trip(distance: 10_000, fuel: samples))
+        let e37 = try #require(TripSummary(entry: entry).fuel?.tripMpg)
+        let e0 = try #require(TripSummary(entry: entry, ethanolPercent: 0).fuel?.tripMpg)
+        #expect(e0 > e37)
+    }
+
+    @Test func aPhoneOnlyTripHasNoFuelFigure() {
+        let s = TripSummary(entry: HistoryEntry(phoneSession: session(track: northbound(count: 101))))
+        #expect(s.fuel == nil && s.fuelGallons == nil)
+    }
+}

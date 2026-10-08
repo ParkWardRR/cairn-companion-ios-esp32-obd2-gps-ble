@@ -22,6 +22,13 @@ public struct TripSnapshot: Codable, Identifiable, Sendable, Equatable {
     public var startLat: Double?
     public var startLon: Double?
 
+    /// Metres along the dongle's GNSS track (fixes no more than 5 s apart), when the snapshot holds positions.
+    public var distanceMeters: Double?
+    /// The dongle's track, thinned for drawing. Empty when the snapshot has no positions for this trip.
+    public var route: [RoutePoint] = []
+    /// MAF and lambda moments for a fuel estimate; empty when the dongle caught none.
+    public var fuelSamples: [FuelSample] = []
+
     public var vehicleID: String?
     public var deviceID: String?
 
@@ -66,6 +73,17 @@ public struct TripSnapshot: Codable, Identifiable, Sendable, Equatable {
 
     public var hasLocation: Bool {
         startLat != nil && startLon != nil
+    }
+}
+
+/// One place along a track, for drawing a route.
+public struct RoutePoint: Codable, Sendable, Equatable {
+    public let latitude: Double
+    public let longitude: Double
+
+    public init(latitude: Double, longitude: Double) {
+        self.latitude = latitude
+        self.longitude = longitude
     }
 }
 

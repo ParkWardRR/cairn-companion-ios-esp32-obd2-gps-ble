@@ -15,6 +15,7 @@ public struct TripsView: View {
     @State private var showFavoritesOnly = false
     @State private var searchText = ""
     @State private var allAnnotations: [Annotation] = []
+    @AppStorage(FuelEstimate.ethanolKey) private var ethanol = FuelEstimate.defaultEthanolPercent
 
     public init(recorder: DriveRecorder, vehicleStore: GRDBVehicleStore, maintenanceStore: GRDBMaintenanceStore, syncClient: TripSyncClient) {
         self.recorder = recorder
@@ -73,11 +74,11 @@ public struct TripsView: View {
     }
 
     private var tripDays: [TripDay] {
-        TripDay.group(filteredEntries.map { TripSummary(entry: $0) })
+        TripDay.group(filteredEntries.map { TripSummary(entry: $0, ethanolPercent: ethanol) })
     }
 
     private var summaryTotals: String {
-        let summaries = filteredEntries.map { TripSummary(entry: $0) }.filter { !$0.isBench }
+        let summaries = filteredEntries.map { TripSummary(entry: $0, ethanolPercent: ethanol) }.filter { !$0.isBench }
         let distance = summaries.compactMap(\.distanceMeters).reduce(0, +)
         var parts = ["\(summaries.count) \(summaries.count == 1 ? "trip" : "trips")"]
         if distance > 0 { parts.append(formatDistance(distance)) }
@@ -425,19 +426,31 @@ struct TripDetailView: View {
         }
     }
 
-    private var summary: TripSummary { TripSummary(entry: entry) }
+    @AppStorage(FuelEstimate.ethanolKey) private var ethanol = FuelEstimate.defaultEthanolPercent
+    private var summary: TripSummary { TripSummary(entry: entry, ethanolPercent: ethanol) }
 
     /// The answer to "what was this trip": the route, then the handful of numbers behind it.
     @ViewBuilder
     private var tripHeader: some View {
-        if let session = entry.phoneSession {
-            TripRouteMap(session: session)
-        }
+        TripRouteMap(runs: summary.routeRuns)
         MetricGrid {
             Metric("Distance", summary.distanceMeters.map { String(format: "%.1f", $0 / 1000) } ?? "\u{2014}", unit: summary.distanceMeters == nil ? nil : "km")
             Metric("Duration", formatDuration(summary.durationSeconds))
             Metric("Average speed", summary.averageSpeedKph.map(String.init) ?? "\u{2014}", unit: summary.averageSpeedKph == nil ? nil : "km/h")
             Metric("Top speed", summary.maxSpeedKph.map(String.init) ?? "\u{2014}", unit: summary.maxSpeedKph == nil ? nil : "km/h")
+            if let fuel = summary.fuel {
+                Metric("Fuel economy", String(format: "%.1f", fuel.tripMpg), unit: "mpg")
+                if let cruise = fuel.cruiseMpg {
+                    Metric("Cruising", String(format: "%.1f", cruise), unit: "mpg")
+                }
+                if let gallons = summary.fuelGallons {
+                    Metric("Fuel used", String(format: "%.2f", gallons), unit: "gal")
+                }
+            }
+        }
+        if let fuel = summary.fuel {
+            Text("Economy is estimated from \(fuel.sampleCount) airflow readings at E\(fuel.ethanolPercent): the car's own fuel rate is not read. Set the blend in Settings.")
+                .font(.footnote).foregroundStyle(.secondary)
         }
         if summary.isBench {
             Text("This looks like a bench test: no engine data and the dongle never reported driving.")

@@ -133,7 +133,69 @@ actor SnapshotStore {
                 snapshotAt: Foundation.Date()
             ))
         }
+        enrich(&snapshots, conn)
         return snapshots
+    }
+
+    /// Distance, a route to draw and the MAF samples behind a fuel estimate, per trip. Each is optional:
+    /// a snapshot without the table or column just leaves the trip without it.
+    private nonisolated func enrich(_ snapshots: inout [TripSnapshot], _ conn: Connection) {
+        var index: [String: Int] = [:]
+        for (i, snapshot) in snapshots.enumerated() { index[snapshot.id] = i }
+
+        // Metres from the dongle's own GNSS speed over each interval (a gap over 10 s counts as 10 s), the
+        // way the dashboard's trip page does; position jitter while parked would add distance that was not driven.
+        if let r = try? conn.query("""
+            SELECT boot_id, coalesce(sum(speed_mps * least(lead_ms - mono_ms, 10000) / 1000.0), 0) AS distance_m
+            FROM (
+                SELECT boot_id, mono_ms, speed_mps,
+                       lead(mono_ms) OVER (PARTITION BY boot_id ORDER BY mono_ms) AS lead_ms
+                FROM position
+                WHERE speed_mps IS NOT NULL AND coalesce(source_flags, 0) & 32 = 0
+            ) WHERE lead_ms IS NOT NULL
+            GROUP BY boot_id
+        """) {
+            for row in 0..<r.rowCount {
+                if let id = strVal(r, col: 0, row: row), let i = index[id], let metres = dblVal(r, col: 1, row: row), metres > 0 {
+                    snapshots[i].distanceMeters = metres
+                }
+            }
+        }
+
+        // about 120 places per trip is plenty for a thumbnail
+        if let r = try? conn.query("""
+            SELECT boot_id, lat, lon FROM (
+                SELECT boot_id, lat, lon,
+                       row_number() OVER (PARTITION BY boot_id ORDER BY mono_ms) AS rn,
+                       count(*) OVER (PARTITION BY boot_id) AS n
+                FROM position
+                WHERE lat != 0 AND lon != 0 AND fix_type > 0 AND coalesce(source_flags, 0) & 32 = 0
+            ) WHERE rn % greatest(1, n // 120) = 0 OR rn = 1 OR rn = n
+            ORDER BY boot_id, rn
+        """) {
+            for row in 0..<r.rowCount {
+                if let id = strVal(r, col: 0, row: row), let i = index[id],
+                   let lat = dblVal(r, col: 1, row: row), let lon = dblVal(r, col: 2, row: row) {
+                    snapshots[i].route.append(RoutePoint(latitude: lat, longitude: lon))
+                }
+            }
+        }
+
+        // MAF is only polled on some rounds, so each airflow reading is paired with the speed just before it
+        if let r = try? conn.query("""
+            SELECT b.boot_id, o.speed_kph, b.maf_cgps, b.lambda_ratio
+            FROM boost b
+            ASOF JOIN obd o ON b.boot_id = o.boot_id AND b.mono_ms >= o.mono_ms
+            WHERE b.maf_cgps IS NOT NULL AND b.lambda_ratio IS NOT NULL AND o.speed_kph IS NOT NULL
+            ORDER BY b.boot_id, b.mono_ms
+        """) {
+            for row in 0..<r.rowCount {
+                if let id = strVal(r, col: 0, row: row), let i = index[id],
+                   let kph = dblVal(r, col: 1, row: row), let maf = dblVal(r, col: 2, row: row), let lambda = dblVal(r, col: 3, row: row) {
+                    snapshots[i].fuelSamples.append(FuelSample(speedKph: kph, mafCgps: maf, lambda: lambda))
+                }
+            }
+        }
     }
 
     func close() {
