@@ -98,15 +98,26 @@ The entitlement is declared in `project.yml` and generated into `App/CairnCompan
 <true/>
 ```
 
-Device builds will fail to sign until the App ID carries the matching capability:
+**Done for development as of 2026-10-08.** Apple assigned the Driving Task entitlement to the
+account, the capability is enabled on the `app.cairn.companion` App ID, and the development profile
+carries it. A device build signs, installs and runs with the entitlement embedded:
 
-1. [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list)
-   → the App ID for `app.cairn.companion`.
-2. Additional Capabilities → enable **CarPlay Driving Task App** → Save.
-3. Regenerate the development provisioning profile and let Xcode pick it up.
+```
+$ codesign -d --entitlements :- CairnCompanion.app
+  "application-identifier" => "6U62M4232W.app.cairn.companion"
+  "com.apple.developer.carplay-driving-task" => true
+```
 
-Simulator builds are unaffected: iOS strips the entitlement for the simulator, so the CarPlay scene
-still connects there without the portal step.
+If it ever needs redoing — a new App ID, or a profile that has lost the capability — a device build
+with `xcodebuild -allowProvisioningUpdates` enables it and regenerates the profile, or do it by hand
+at [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list)
+→ the App ID → Additional Capabilities → **CarPlay Driving Task App**.
+
+**The distribution profile is a separate job.** The team store profile predates the capability, so an
+App Store build would ship without it. Archive once with `-allowProvisioningUpdates` to regenerate.
+
+Simulator builds never carry it: iOS strips the entitlement for the simulator. The CarPlay scene
+still connects there, so the simulator remains the right place to check layout.
 
 ## Testing it
 

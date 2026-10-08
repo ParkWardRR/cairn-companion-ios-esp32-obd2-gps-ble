@@ -221,7 +221,9 @@ the right stretch with the telemetry that was actually live at the time.
 - [x] Readings held and faded through `LinkHealth.freshness` rather than blanked; "never read" drawn differently from "reading zero"
 - [x] Keystone and gauge glyphs drawn in Core Graphics, cached per bucket, light and dark in one `UIImageAsset`
 - [x] CarPlay is handed `SessionState` and never `DrivingSession`, so the car screen cannot start or stop recording
-- [ ] Enable **CarPlay Driving Task App** on the App ID and regenerate the provisioning profile (device builds will not sign until this is done)
-- [ ] Simulator check: scene registration and state transitions via I/O → External Displays → CarPlay
+- [x] **CarPlay Driving Task App** assigned to the account and enabled on the App ID; the development profile for `app.cairn.companion` carries `com.apple.developer.carplay-driving-task` (2026-10-08)
+- [x] Device build signs with the entitlement embedded, installs, and runs on hardware — so the scene manifest did not disturb the phone's own window scene
+- [ ] Distribution profile still predates the capability. An App Store build (`ExportOptions.plist` is `app-store-connect`) needs its profile regenerated before the entitlement reaches a release
+- [ ] Drive the car screen: CarPlay Simulator (Additional Tools for Xcode, a separate download) against the phone, or the head unit directly. Not yet seen running
 - [ ] Drive test: cold launch from the head unit, locked phone, disconnect and reconnect
 - [ ] Widgets and Live Activities, still worth doing on their own merits — the Lock Screen and StandBy reach a phone on a mount in a car with no CarPlay head unit at all
