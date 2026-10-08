@@ -2,5 +2,7 @@
 // Local.xcconfig.example to Local.xcconfig and fill it in.
 CAIRN_BUNDLE_ID = app.cairn.companion
 CAIRN_TEAM_ID =
+// The dashboard's host name, for passkeys (webcredentials). A placeholder until Local.xcconfig names yours.
+CAIRN_PASSKEY_DOMAIN = cairn.example.lan
 
 #include? "Local.xcconfig"

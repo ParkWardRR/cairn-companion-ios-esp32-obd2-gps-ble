@@ -582,3 +582,35 @@ Related repositories: [front door and roadmap](https://github.com/ParkWardRR/cai
 ## License
 
 [Blue Oak Model License 1.0.0](LICENSE)
+
+## Passkeys
+
+**Settings > Dashboard** signs this iPhone in to the web dashboard with a passkey, or makes one. It uses
+`AuthenticationServices` (`ASAuthorizationPlatformPublicKeyCredentialProvider`), Apple's own passkey API and the one
+Safari uses, so the passkey lives in iCloud Keychain, is unlocked with Face ID, and works in the app and in Safari
+alike. There is no password and no account in any cloud service.
+
+- **On your tailnet** the dashboard already recognises an allowed device, so the card says "Signed in: this phone is on
+  your tailnet" and needs nothing. A passkey is for when you are not on the tailnet, e.g. on home Wi-Fi.
+- **Sign in with a passkey** sends the dashboard's challenge to the system sheet and the answer back
+  (`PasskeyCodec`, `DashboardAuthClient` in CairnCore, tested). The session cookie it gets is kept, and **Open the
+  dashboard** shows the dashboard in the app with that session.
+- **Create a passkey on this iPhone**: the very first needs a tailnet device the dashboard allows, or the one-time code
+  from `bootstrap-code` on the server (the app asks for it); later ones need a passkey sign-in within five minutes. The
+  dashboard's rules for this are in its `docs/auth.md`.
+
+Setting it up (the address is yours and is never committed):
+
+1. In `Config/Local.xcconfig` set `CAIRN_PASSKEY_DOMAIN` to the dashboard's host name (see `Local.xcconfig.example`).
+   The entitlement is `webcredentials:<that host>`.
+2. On the dashboard host set `NUXT_AUTH_APPLE_APPS=<TEAMID>.<bundle id>` so it serves
+   `/.well-known/apple-app-site-association`.
+3. If the dashboard is only reachable on your own network, Apple's CDN cannot fetch that file. Add `?mode=developer`
+   to the domain, turn on **Settings > Developer > Associated Domains Development** on the phone, and use a
+   development-signed build: iOS then fetches the file from the device itself. A TestFlight or App Store build needs
+   the dashboard reachable from the internet instead.
+4. The address typed in Settings must be the same host (`https://` only): a passkey belongs to one site.
+
+What cannot be checked without a phone: the system passkey sheet itself. The simulator build compiles and runs, the
+conversion to and from the dashboard's JSON is unit-tested, and the dashboard side is exercised end to end by its
+acceptance suite with a software authenticator; the first real sign-in on a device is the remaining check.
