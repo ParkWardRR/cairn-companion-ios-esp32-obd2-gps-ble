@@ -12,6 +12,7 @@
 		9964632F1812CC2D009FBA42 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1F68A39F5C63DF9582280DE8 /* PrivacyInfo.xcprivacy */; };
 		A2F12BC86A2E4BE3DF4FB1F1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F25C8E5071A70524FB14CEF0 /* Assets.xcassets */; };
 		DEBE330B7297E0BCA57160A3 /* DemoMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2660E6B18D6287323804A65 /* DemoMode.swift */; };
+		EAB00564990A93E7528EA5BD /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9063CB0A75E7DA254D821C54 /* CarPlaySceneDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		490683BC313B464740E9D585 /* CairnCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CairnCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56A8902795E41E4DCED67606 /* CairnCompanion */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CairnCompanion; path = .; sourceTree = SOURCE_ROOT; };
 		5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CairnCompanionApp.swift; sourceTree = "<group>"; };
+		9063CB0A75E7DA254D821C54 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		A2660E6B18D6287323804A65 /* DemoMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMode.swift; sourceTree = "<group>"; };
 		CB371EDA615C2376801123BF /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		F25C8E5071A70524FB14CEF0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -44,6 +46,7 @@
 				F25C8E5071A70524FB14CEF0 /* Assets.xcassets */,
 				FCF05D9B75AF694FB08315A9 /* CairnCompanion.entitlements */,
 				5D2157BE912A13ED0200C6E9 /* CairnCompanionApp.swift */,
+				9063CB0A75E7DA254D821C54 /* CarPlaySceneDelegate.swift */,
 				A2660E6B18D6287323804A65 /* DemoMode.swift */,
 				2C915BBCB042E798AC2B2C03 /* Info.plist */,
 				1F68A39F5C63DF9582280DE8 /* PrivacyInfo.xcprivacy */,
@@ -163,6 +166,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				010AB516EFBEAE671DE70836 /* CairnCompanionApp.swift in Sources */,
+				EAB00564990A93E7528EA5BD /* CarPlaySceneDelegate.swift in Sources */,
 				DEBE330B7297E0BCA57160A3 /* DemoMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -236,7 +240,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = App/CairnCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Cairn;
@@ -246,6 +250,7 @@
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Cairn Companion reads the barometer to send relative altitude to your Cairn device.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -268,7 +273,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = App/CairnCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Cairn;
@@ -278,6 +283,7 @@
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Cairn Companion starts sending your phone's location to your Cairn device when it connects, even if the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cairn Companion streams your phone's location to your Cairn device during a driving session.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Cairn Companion reads the barometer to send relative altitude to your Cairn device.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

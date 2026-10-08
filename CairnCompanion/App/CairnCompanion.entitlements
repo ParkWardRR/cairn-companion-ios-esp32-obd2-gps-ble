@@ -6,5 +6,7 @@
 	<array>
 		<string>webcredentials:$(CAIRN_PASSKEY_DOMAIN)</string>
 	</array>
+	<key>com.apple.developer.carplay-driving-task</key>
+	<true/>
 </dict>
 </plist>

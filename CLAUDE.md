@@ -29,6 +29,13 @@ SPM multi-target inside `CairnCompanion/`:
 3. **Garage** (`GarageView` → `VehicleProfileView`) — vehicle cards, maintenance, odometer
 4. **Settings** (`SettingsView`) — server URL, dashboard passkeys (`Passkey/`: `AuthenticationServices` sign-in and creation, in-app dashboard), sync status, danger zone
 
+### CarPlay
+
+Read-only Driving Task screen in `Sources/*/CarPlay/` plus `App/CarPlaySceneDelegate.swift`. See
+`docs/carplay.md`. Two rules it depends on: the row skeleton is built once and only mutated in place
+(so a BLE dropout never reloads the list), and readings fade through `LinkHealth.freshness` instead of
+being blanked. All wording and banding lives in `HUDBuilder` in CairnCore, under test.
+
 ## Contracts
 
 `contracts.lock` pins a release of the contracts (tag and commit). `scripts/fetch-contracts.sh` fetches it into `.contracts/` (git-ignored); run it before `swift test`. `CAIRN_CONTRACTS=<dir>` points the tests at a local checkout instead. Nothing from the contracts is vendored: BLE golden vectors and the sync/v1 vectors are read from there. Bumping the pin is the only way to change them.

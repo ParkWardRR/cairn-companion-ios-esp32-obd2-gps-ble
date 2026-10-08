@@ -45,6 +45,11 @@ struct CairnCompanionApp: App {
         session.onDongleReady = { offload.dongleReady() }
         session.onDongleLost = { offload.dongleLost() }
 
+        // Introduce the live session to CarPlay before any scene can connect — CarPlay is allowed to
+        // cold-launch the app, and its scene delegate has no other way to reach this graph. Readings
+        // only: the car screen is never handed anything that could start or stop recording.
+        CairnCarPlayLink.shared.attach(state: state, deviceInfo: { ble.lastDeviceInfo })
+
         #if DEBUG
         if DemoMode.seedsTrips { Task { await DemoMode.seedTrips(into: driveStore) } }
         if let scenario = DemoMode.scenario {

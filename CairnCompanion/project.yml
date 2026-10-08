@@ -29,12 +29,17 @@ targets:
         # set CAIRN_PASSKEY_DOMAIN in Config/Local.xcconfig; it is never committed.
         com.apple.developer.associated-domains:
           - webcredentials:$(CAIRN_PASSKEY_DOMAIN)
+        # Needs "CarPlay Driving Task App" enabled on the App ID and a provisioning profile that
+        # carries it, or signing fails. See docs/carplay.md.
+        com.apple.developer.carplay-driving-task: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(CAIRN_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "9"
+        # The CarPlay scene is declared by hand below; Xcode's generated manifest would replace it.
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: NO
         IPHONEOS_DEPLOYMENT_TARGET: "18.0"
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.travel
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
@@ -53,6 +58,15 @@ targets:
       path: App/Info.plist
       properties:
         UIBackgroundModes: [location, bluetooth-central]
+        # Only the CarPlay role is declared. The phone's window scene is left to SwiftUI's
+        # WindowGroup, which supplies the default configuration itself.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            CPTemplateApplicationSceneSessionRoleApplication:
+              - UISceneClassName: CPTemplateApplicationScene
+                UISceneConfigurationName: Cairn CarPlay
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).CarPlaySceneDelegate
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
         CFBundleURLTypes:
