@@ -1,7 +1,7 @@
 import CairnCore
 import SwiftUI
 
-public struct HistoryView: View {
+public struct TripsView: View {
     let recorder: DriveRecorder
     let vehicleStore: GRDBVehicleStore
     let maintenanceStore: GRDBMaintenanceStore
@@ -72,6 +72,18 @@ public struct HistoryView: View {
         filterVehicleID != nil || dateRange != .all || showFavoritesOnly || !searchText.isEmpty
     }
 
+    private var tripDays: [TripDay] {
+        TripDay.group(filteredEntries.map { TripSummary(entry: $0) })
+    }
+
+    private var summaryTotals: String {
+        let summaries = filteredEntries.map { TripSummary(entry: $0) }.filter { !$0.isBench }
+        let distance = summaries.compactMap(\.distanceMeters).reduce(0, +)
+        var parts = ["\(summaries.count) \(summaries.count == 1 ? "trip" : "trips")"]
+        if distance > 0 { parts.append(formatDistance(distance)) }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
     public var body: some View {
         NavigationStack {
             Group {
@@ -79,9 +91,9 @@ public struct HistoryView: View {
                     ProgressView()
                 } else if allEntries.isEmpty {
                     ContentUnavailableView(
-                        "No drives yet",
+                        "No trips yet",
                         systemImage: "car.side",
-                        description: Text("Drives are recorded automatically when the Cairn dongle connects.")
+                        description: Text("Trips appear here by themselves once your Cairn dongle has connected and you have driven.")
                     )
                 } else {
                     VStack(spacing: 0) {
@@ -94,7 +106,7 @@ public struct HistoryView: View {
                     }
                 }
             }
-            .navigationTitle("History")
+            .navigationTitle("Trips")
             .searchable(text: $searchText, prompt: "Search notes")
             .toolbar {
                 if syncClient.hasServer {
@@ -167,6 +179,11 @@ public struct HistoryView: View {
                 }
             }
             .pickerStyle(.segmented)
+
+            Text(summaryTotals)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -184,16 +201,16 @@ public struct HistoryView: View {
     @ViewBuilder
     private var filteredEmptyState: some View {
         ContentUnavailableView {
-            Label("No matching drives", systemImage: "magnifyingglass")
+            Label("No matching trips", systemImage: "magnifyingglass")
         } description: {
             if showFavoritesOnly {
-                Text("No favorited drives found. Star a drive from its detail view.")
+                Text("No starred trips. Open a trip and star it.")
             } else if !searchText.isEmpty {
-                Text("No drives have notes matching \"\(searchText)\".")
+                Text("No trips have notes matching \"\(searchText)\".")
             } else if dateRange != .all {
-                Text("No drives recorded \(dateRange.emptyLabel).")
+                Text("No trips \(dateRange.emptyLabel).")
             } else if let vid = filterVehicleID, let v = vehicles.first(where: { $0.id == vid }) {
-                Text("No drives recorded for \(v.displayName).")
+                Text("No trips for \(v.displayName).")
             } else {
                 Text("Try adjusting your filters.")
             }
@@ -211,21 +228,26 @@ public struct HistoryView: View {
     // MARK: - Drive List
 
     private var driveList: some View {
-        List {
-            ForEach(filteredEntries) { entry in
-                NavigationLink(value: entry.id) {
-                    HistoryRow(entry: entry, annotations: allAnnotations.filter { $0.targetID == entry.id })
-                }
-            }
-            .onDelete { indexSet in
-                let current = filteredEntries
-                Task {
-                    for i in indexSet {
-                        if let id = current[i].phoneSession?.id {
-                            try? await recorder.deleteSession(id)
+        let entries = Dictionary(uniqueKeysWithValues: filteredEntries.map { ($0.id, $0) })
+        return List {
+            ForEach(tripDays) { day in
+                Section {
+                    ForEach(day.trips) { summary in
+                        if let entry = entries[summary.id] {
+                            NavigationLink(value: entry.id) {
+                                TripCard(summary: summary, entry: entry, annotations: allAnnotations.filter { $0.targetID == entry.id })
+                            }
                         }
                     }
-                    await load()
+                    .onDelete { indexSet in
+                        let doomed = indexSet.compactMap { entries[day.trips[$0].id]?.phoneSession?.id }
+                        Task {
+                            for id in doomed { try? await recorder.deleteSession(id) }
+                            await load()
+                        }
+                    }
+                } header: {
+                    TripDayHeader(day: day)
                 }
             }
         }
@@ -234,7 +256,7 @@ public struct HistoryView: View {
         #endif
         .navigationDestination(for: String.self) { id in
             if let entry = allEntries.first(where: { $0.id == id }) {
-                DriveDetailView(entry: entry, maintenanceStore: maintenanceStore, vehicles: vehicles) {
+                TripDetailView(entry: entry, maintenanceStore: maintenanceStore, vehicles: vehicles) {
                     Task { await loadAnnotations() }
                 }
             }
@@ -299,133 +321,9 @@ enum DateRange: String, CaseIterable {
     }
 }
 
-// MARK: - Row
-
-private struct HistoryRow: View {
-    let entry: HistoryEntry
-    let annotations: [Annotation]
-
-    private var isFavorite: Bool {
-        annotations.contains { $0.kind == .favorite }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(entry.startedAt, style: .date)
-                    .font(.headline)
-                if isFavorite {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundStyle(.yellow)
-                }
-                Spacer()
-                sourceIcon(entry)
-                if let session = entry.phoneSession {
-                    lifecycleBadge(session)
-                }
-            }
-            HStack(spacing: 12) {
-                Text(entry.startedAt, style: .time)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if let session = entry.phoneSession {
-                    Label(formatDuration(session.duration), systemImage: "timer")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let frac = session.streamingFraction {
-                        Label("\(Int(frac * 100))%", systemImage: "antenna.radiowaves.left.and.right")
-                            .font(.caption)
-                            .foregroundStyle(frac > 0.9 ? .green : frac > 0.5 ? .orange : .red)
-                    }
-                    if session.reconnects > 0 {
-                        Label("\(session.reconnects)", systemImage: "arrow.triangle.2.circlepath")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                } else if let trip = entry.serverTrip {
-                    Label(formatDuration(trip.durationSeconds), systemImage: "timer")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if let sync = entry.syncLabel {
-                Text(sync)
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
-            if let trip = entry.serverTrip {
-                HStack(spacing: 8) {
-                    if let speed = trip.maxSpeedKph {
-                        Label("\(speed) km/h", systemImage: "speedometer")
-                            .font(.caption)
-                    }
-                    if trip.obdSamples > 0 {
-                        Label("\(trip.obdSamples) OBD", systemImage: "engine.combustion")
-                            .font(.caption)
-                    }
-                    Label("\(trip.gnssSamples) GPS", systemImage: "antenna.radiowaves.left.and.right")
-                        .font(.caption)
-                }
-                .foregroundStyle(.secondary)
-            }
-            let noteAnnotations = annotations.filter { $0.kind == .note }
-            if let firstNote = noteAnnotations.first {
-                Text(firstNote.text)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.vertical, 4)
-        .opacity(entry.phoneSession?.quality == .bench ? 0.55 : 1)
-    }
-
-    @ViewBuilder
-    private func lifecycleBadge(_ session: DriveSession) -> some View {
-        switch session.lifecycle {
-        case .active:
-            badgePill("LIVE", color: .green)
-        case .gapPending:
-            badgePill("RECONNECTING", color: .orange)
-        case .interrupted:
-            badgePill("INTERRUPTED", color: .red)
-        case .closed:
-            if session.quality == .bench {
-                badgePill("BENCH", color: .secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func sourceIcon(_ entry: HistoryEntry) -> some View {
-        if entry.isMatched {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.caption)
-                .foregroundStyle(.green)
-        } else if entry.isOnServerOnly {
-            Image(systemName: "cloud.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else if entry.isOnPhoneOnly {
-            Image(systemName: "iphone")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func badgePill(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(color, in: Capsule())
-    }
-}
-
 // MARK: - Detail
 
-struct DriveDetailView: View {
+struct TripDetailView: View {
     let entry: HistoryEntry
     let maintenanceStore: GRDBMaintenanceStore
     let vehicles: [Vehicle]
@@ -445,6 +343,7 @@ struct DriveDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                tripHeader
                 if let session = entry.phoneSession {
                     phoneSection(session)
                 }
@@ -523,6 +422,26 @@ struct DriveDetailView: View {
                     noteText = ""
                 }
             }
+        }
+    }
+
+    private var summary: TripSummary { TripSummary(entry: entry) }
+
+    /// The answer to "what was this trip": the route, then the handful of numbers behind it.
+    @ViewBuilder
+    private var tripHeader: some View {
+        if let session = entry.phoneSession {
+            TripRouteMap(session: session)
+        }
+        MetricGrid {
+            Metric("Distance", summary.distanceMeters.map { String(format: "%.1f", $0 / 1000) } ?? "\u{2014}", unit: summary.distanceMeters == nil ? nil : "km")
+            Metric("Duration", formatDuration(summary.durationSeconds))
+            Metric("Average speed", summary.averageSpeedKph.map(String.init) ?? "\u{2014}", unit: summary.averageSpeedKph == nil ? nil : "km/h")
+            Metric("Top speed", summary.maxSpeedKph.map(String.init) ?? "\u{2014}", unit: summary.maxSpeedKph == nil ? nil : "km/h")
+        }
+        if summary.isBench {
+            Text("This looks like a bench test: no engine data and the dongle never reported driving.")
+                .font(.footnote).foregroundStyle(.secondary)
         }
     }
 
@@ -737,18 +656,4 @@ enum HistoryMerger {
         guard sessionDuration > 0 else { return false }
         return overlap / sessionDuration > 0.5
     }
-}
-
-// MARK: - Formatting
-
-private func formatDuration(_ seconds: TimeInterval) -> String {
-    let s = Int(max(0, seconds).rounded())
-    if s < 60 { return "\(s)s" }
-    if s < 3600 { return "\(s / 60)m \(s % 60)s" }
-    return "\(s / 3600)h \(String(format: "%02d", (s % 3600) / 60))m"
-}
-
-private func formatDistance(_ meters: Double) -> String {
-    if meters < 1000 { return "\(Int(meters))m" }
-    return String(format: "%.1f km", meters / 1000)
 }

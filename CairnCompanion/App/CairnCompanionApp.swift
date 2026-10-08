@@ -46,6 +46,7 @@ struct CairnCompanionApp: App {
         session.onDongleLost = { offload.dongleLost() }
 
         #if DEBUG
+        if DemoMode.seedsTrips { Task { await DemoMode.seedTrips(into: driveStore) } }
         if let scenario = DemoMode.scenario {
             DemoMode.apply(scenario, to: state)
             return

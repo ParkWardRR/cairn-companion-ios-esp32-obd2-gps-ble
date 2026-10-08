@@ -14,6 +14,16 @@ public struct RootView: View {
     @State private var showWelcome: Bool
     @State private var pendingLink: PendingLink?
     @State private var linkError: String?
+    @State private var tab = Self.initialTab
+
+    private static var initialTab: Int {
+        #if DEBUG
+        // CAIRN_DEMO_TAB=1 opens on Trips, for screenshots in the simulator.
+        ProcessInfo.processInfo.environment["CAIRN_DEMO_TAB"].flatMap(Int.init) ?? 0
+        #else
+        0
+        #endif
+    }
 
     private struct PendingLink: Identifiable {
         let id = UUID()
@@ -69,15 +79,19 @@ public struct RootView: View {
                 withAnimation { showWelcome = false }
             }
         } else {
-            TabView {
+            TabView(selection: $tab) {
                 MainView(session: session)
                     .tabItem { Label("Drive", systemImage: "location.fill") }
-                HistoryView(recorder: session.recorder, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
-                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                    .tag(0)
+                TripsView(recorder: session.recorder, vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, syncClient: syncClient)
+                    .tabItem { Label("Trips", systemImage: "road.lanes") }
+                    .tag(1)
                 GarageView(vehicleStore: vehicleStore, maintenanceStore: maintenanceStore, recorder: session.recorder)
                     .tabItem { Label("Garage", systemImage: "building.2") }
+                    .tag(2)
                 SettingsView(session: session, syncClient: syncClient, dataPorter: dataPorter, enrolmentService: enrolmentService, offload: offload)
                     .tabItem { Label("Settings", systemImage: "gear") }
+                    .tag(3)
             }
         }
     }

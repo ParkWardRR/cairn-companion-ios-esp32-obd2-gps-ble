@@ -12,6 +12,34 @@ enum DemoMode {
     /// `CAIRN_DEMO_SCALE=0.85` shrinks the UI so a long page fits one screenshot.
     static var scale: Double? { ProcessInfo.processInfo.environment["CAIRN_DEMO_SCALE"].flatMap(Double.init) }
 
+    /// `CAIRN_DEMO_TRIPS=1` writes a few finished drives with tracks, so the Trips tab has something to show.
+    static var seedsTrips: Bool { ProcessInfo.processInfo.environment["CAIRN_DEMO_TRIPS"] != nil }
+
+    static func seedTrips(into store: any DriveStore) async {
+        let now = Date()
+        // (hours ago, minutes long, loop radius in degrees, bench?)
+        let drives: [(Double, Double, Double, Bool)] = [(2, 24, 0.020, false), (5, 11, 0.008, false), (27, 52, 0.045, false), (30, 1, 0, true), (52, 33, 0.030, false)]
+        for (hoursAgo, minutes, radius, bench) in drives {
+            let start = now.addingTimeInterval(-hoursAgo * 3600)
+            var s = DriveSession(startedAt: start)
+            s.lifecycle = .closed
+            s.closedAt = start.addingTimeInterval(minutes * 60)
+            s.obdReceived = !bench
+            s.deviceReportedDriving = !bench
+            s.streamingSeconds = minutes * 60 * 0.97
+            s.observedSeconds = minutes * 60
+            let n = Int(minutes * 12)
+            s.track = radius == 0 ? [] : (0..<n).map { i in
+                let a = Double(i) / Double(n) * 2 * .pi
+                // a lopsided loop, so each route has its own shape
+                let lat = 37.35 + radius * sin(a) * (1 + 0.3 * cos(2 * a))
+                let lon = -122.03 + radius * 1.4 * cos(a) * (1 + 0.2 * sin(3 * a))
+                return TrackPoint(fix: PhoneGNSSFix(latitude: lat, longitude: lon, ellipsoidalAltitude: 30, horizontalAccuracy: 6, verticalAccuracy: 8, speed: 13 + 6 * sin(a * 2), course: 0, timestamp: start.addingTimeInterval(Double(i) * 5)))
+            }
+            try? await store.save(s)
+        }
+    }
+
     static func apply(_ scenario: String, to state: SessionState) {
         state.isArmed = true
         switch scenario {

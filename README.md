@@ -37,7 +37,7 @@ The app does three jobs:
 
 1. **GPS assist.** The dongle sits low under the dash with a poor view of the sky. The phone on your windshield has a better one, so the app streams its location, with an accuracy figure for every fix, to the dongle over Bluetooth LE.
 2. **Offload relay.** After a drive the phone pulls the dongle's sealed trip bundles over BLE, uploads them to your server, and hands the server's signed receipt back so the dongle can free space. The phone moves bundles it cannot read or alter. **The message codec, session and transfer checks landed 2026-10-06 (PR #32). The CoreBluetooth wiring is still open ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)), so the app does not yet pair with the dongle; the first real over-the-air offload (nine bundles in 62 s) was carried by `cmd/cairn-phone` in the server repository, which is the reference this app matches.** See [Status](#status-and-roadmap).
-3. **Server client and trip browser.** The app enrols with your server as a named client, signs every request with a key that never leaves the phone's Secure Enclave, and keeps a local copy of your trips so History works offline. The signing client is built and tested; wiring it into the screens is still to do.
+3. **Server client and trip browser.** The app enrols with your server as a named client, signs every request with a key that never leaves the phone's Secure Enclave, and keeps a local copy of your trips so Trips works offline. The signing client is built and tested; wiring it into the screens is still to do.
 
 It also works with no server at all: pairing, GPS assist, drive history, a garage with a maintenance log, and encrypted backup are all local ([standalone mode](#standalone-mode)).
 
@@ -69,7 +69,7 @@ It also works with no server at all: pairing, GPS assist, drive history, a garag
 | **Zero-tap sessions** | Holds a pending BLE connection to your dongle. Location starts when the link is bonded and stops when it drops. No Start button | Running on hardware |
 | **Link health** | Per-channel "last heard" badges (live, stale, silent), last readings kept dimmed after a drop, reconnect countdown with attempt count, link timeline, sent versus accepted bar | Built, logic tested on macOS |
 | **Drive history** | Every connection session is recorded on the phone: duration, streaming share, sent / accepted / rejected / dropped, reconnects, link events. A gap over 10 minutes closes a drive; interrupted sessions are recovered after a kill | Built |
-| **History tab** | Phone sessions plus server trips, vehicle / date / favourites filters, note search, inline annotation editing. A phone session and a server trip are matched when they overlap by more than half the session | Built; server trips need a server |
+| **Trips tab** | Phone sessions plus server trips as a scrollable list grouped by day: each card shows a route sketch, distance, duration and top speed, and a tap opens the route map, headline numbers and the full detail. Vehicle / date / favourites filters, note search, inline annotation editing. A phone session and a server trip are matched when they overlap by more than half the session | Built; server trips need a server |
 | **Garage** | Multiple vehicles, dongle-to-vehicle assignment, odometer corrections with a chart, a 15-category maintenance log, per-vehicle drive stats | Built |
 | **Bluetooth settings** | Dongle status, a five-check troubleshooting list, connection log, BLE info, start / stop / forget dongle | Built |
 | **First-run welcome** | Three plain-language pages, shown once | Built (an intro only; no enrolment step yet) |
@@ -80,7 +80,7 @@ It also works with no server at all: pairing, GPS assist, drive history, a garag
 | **Secure Enclave identity** | `SecureEnclaveIdentity` generates and holds a P-256 signing key | Built; not yet used by any screen |
 | **BLE bundle offload** | `LIST`, `GET_MANIFEST`, `READ`, `PUT_RECEIPT` over `OFFLOAD_CONTROL` / `OFFLOAD_DATA` | **Not started** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)) |
 
-The four tabs are **Drive** (live session), **History**, **Garage** and **Settings**.
+The four tabs are **Drive** (live session), **Trips**, **Garage** and **Settings**.
 
 ### Why the phone's GPS helps
 
@@ -431,7 +431,7 @@ On first launch:
 1. Read the welcome pages, then grant **Bluetooth** and **Location**. Choose **Always** when asked (needed to stream from a background BLE wake).
 2. The first read of an encrypted characteristic makes iOS ask for the dongle's **6-digit passkey**. After that, reconnects are silent.
 3. Add a vehicle in **Garage** and assign your dongle to it.
-4. For History from a server, enter your LAN and/or Tailnet URL under **Settings**.
+4. For Trips from a server, enter your LAN and/or Tailnet URL under **Settings**.
 
 If the dongle's bond is ever reset, forget "Cairn" under iOS Settings > Bluetooth first.
 
@@ -491,7 +491,7 @@ Three levels, kept apart on purpose: **on hardware** (the BLE link has run again
 | Phase 0: design, protocol v1, validation matrix | Done | |
 | Phase 1: GPS assist (encode, bond, stream, acceptance feedback, auto-start, link health, drive history) | **On hardware** | Firmware rows done (dual recording, phone-state clearing, bond reset, golden vectors in C). Open: background wake from suspended and terminated, drive test (phone vs internal accuracy, battery, write rate), firmware stack / heap / IMU rows |
 | Phase 2: `BARO_ALT`, `UTC_SYNC`, `OBD_LIVE`, `DEVICE_STATUS` | Host-tested (app side) | Dormant: the shipped firmware exposes none of these yet. `CLHeading` not started |
-| Garage, maintenance, odometer, annotations, History filters | Built | Closed [#8](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/8) |
+| Garage, maintenance, odometer, annotations, Trips filters | Built | Closed [#8](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/8) |
 | Encrypted local store, encrypted export / import | Built | |
 | Standalone mode, welcome flow, Bluetooth settings page | Built | |
 | LAN / Tailnet endpoint selection with diagnostics | Built, partial | Probe works; `instance_id` match and SPKI pinning not enforced |
