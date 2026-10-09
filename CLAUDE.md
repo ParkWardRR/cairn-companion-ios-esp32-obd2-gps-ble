@@ -6,7 +6,7 @@ BLE companion app for the Cairn ESP32 OBD-II/GPS logger dongle.
 
 ```bash
 cd CairnCompanion && swift build   # macOS debug build
-cd CairnCompanion && swift test    # 163 tests, all CairnCore (run scripts/fetch-contracts.sh first)
+cd CairnCompanion && swift test    # 333 tests in 66 suites, all CairnCore (run scripts/fetch-contracts.sh first)
 ```
 
 For iOS builds, use Xcode (`CairnCompanion/CairnCompanion.xcodeproj`).
@@ -47,15 +47,19 @@ being blanked. All wording and banding lives in `HUDBuilder` in CairnCore, under
 
 ## CI
 
-- GitHub Actions workflows must use `runs-on: self-hosted` (local OrbStack). Never use GitHub-hosted runners.
+- GitHub Actions workflows must use `runs-on: self-hosted`. Never use GitHub-hosted runners.
+- This repo's runner is a **macOS** LaunchAgent on the author's Mac (`cairn-mac-ios`), not the Podman host the other four repos use: a Linux runner cannot build `CairnRuntime` (CoreBluetooth, CoreLocation, UIKit, CryptoKit). If CI sits queued, check the LaunchAgent is up.
 
 ## Plan
 
-See `ui-ux-overhaul.md` for the full UI/UX overhaul roadmap (Phases A-F). Phases A, B, and C are complete. Phases D-F are blocked on server-side work.
+The project keeps **one** roadmap, in the front door repo (`ROADMAP.md`). Do not start one here. This app's next work is its Phase 29 (become the dongle's relay: CoreBluetooth offload wiring plus an enrolment screen) and Phase 35 (routes, stretches and marking a drive -- designed in `docs/routes-and-marking.md`, two naming decisions open).
+
+`ui-ux-overhaul.md` covers the UI restructure (Phases A-F); A, B and C are complete and D-F are blocked on server-side work.
 
 ## Related repos
 
-- Front door + roadmap: `ParkWardRR/cairn-driving-log-selfhosted`
+- Front door + the one roadmap: `ParkWardRR/cairn-driving-log-selfhosted`
 - Server: `ParkWardRR/cairn-vehicle-server` (enrolment, sync, revocation APIs)
 - Firmware: `ParkWardRR/cairn-esp32-device-firmware`
 - Web dashboard: `ParkWardRR/cairn-vehicle-web-dashboard`
+- Modules: `ParkWardRR/cairn-modules`

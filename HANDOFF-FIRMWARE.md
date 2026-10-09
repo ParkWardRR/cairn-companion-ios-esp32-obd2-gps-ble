@@ -12,7 +12,8 @@ Last updated against iOS commit state of 2026-10-03.
 | [docs/firmware-changes.md](docs/firmware-changes.md) | Module design, `source_flags` b5, source-state split, recording vs operational policy, storage risks |
 | [docs/validation.md](docs/validation.md) | Acceptance rows. Phase 1 stays open until all pass |
 | [golden-vectors.json](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/contracts-v0.2.0/contracts/ble/v1/vectors/golden/golden-vectors.json) | Shared byte vectors. Make your C decoder agree with them |
-| [docs/roadmap.md](docs/roadmap.md) | Current status; firmware rows are the unchecked ones under **Firmware** |
+| [README Status](README.md#status) | What this app has running, and at which level |
+| [Cairn ROADMAP](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md) | The project's single roadmap, including what this repository and the firmware each owe the other |
 
 ## State of play
 

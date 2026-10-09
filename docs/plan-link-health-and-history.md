@@ -174,7 +174,7 @@ A `DriveStore` protocol in CairnCore, with a file-backed implementation in Cairn
 | 4 | `DriveSegmenter`, `DriveRecord`, `DriveStore`, `DriveRecorder`, crash-recovery, tests | 1 |
 | 5 | History list and Drive detail UI | 3, 4 |
 | 6 | Optional track and map, retention, export | 5, decision 1 |
-| 7 | Docs: `ios-app.md` (non-goal and stale layout section), `roadmap.md`, `validation.md` rows for drop/recover and crash recovery | all |
+| 7 | Docs: `ios-app.md` (non-goal and stale layout section), the README's Status table, `validation.md` rows for drop/recover and crash recovery | all |
 
 ## Risks
 

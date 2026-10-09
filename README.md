@@ -1,5 +1,5 @@
 <!-- cairn-nav:start -->
-<p align="center"><b>Cairn is a family of five repositories.</b> Each builds, tests and releases on its own; they agree through the shared <a href="https://github.com/ParkWardRR/cairn-driving-log-selfhosted/tree/main/contracts">contracts</a>.</p>
+<p align="center"><b>Cairn is a family of six repositories.</b> Each builds, tests and releases on its own; they agree through the shared <a href="https://github.com/ParkWardRR/cairn-driving-log-selfhosted/tree/main/contracts">contracts</a>, and they share one <a href="https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md">roadmap</a>.</p>
 
 | Part | Repository | What it does | Stack | Docs | Issues | CI |
 |---|---|---|---|---|---|---|
@@ -8,18 +8,22 @@
 | Phone | **[cairn-ios-companion-app](https://github.com/ParkWardRR/cairn-ios-companion-app)** ◀ you are here | BLE relay, GPS assist, server client | Swift · SwiftUI | [docs](https://github.com/ParkWardRR/cairn-ios-companion-app/tree/main/docs) | [issues](https://github.com/ParkWardRR/cairn-ios-companion-app/issues) | [CI](https://github.com/ParkWardRR/cairn-ios-companion-app/actions) |
 | Server | [cairn-vehicle-server](https://github.com/ParkWardRR/cairn-vehicle-server) | Verifies, decrypts, stores; serves app and dashboard | Go | [docs](https://github.com/ParkWardRR/cairn-vehicle-server/tree/main/docs) | [issues](https://github.com/ParkWardRR/cairn-vehicle-server/issues) | [CI](https://github.com/ParkWardRR/cairn-vehicle-server/actions) |
 | Dashboard | [cairn-vehicle-web-dashboard](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard) | Browser UI: trips, places, engine, health | Nuxt · TypeScript | [docs](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard/tree/main/docs) | [issues](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard/issues) | [CI](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard/actions) |
+| Modules | [cairn-modules](https://github.com/ParkWardRR/cairn-modules) | Interpretation, separated from the logging core: one package per module | YAML · Rust | [readme](https://github.com/ParkWardRR/cairn-modules#readme) | [issues](https://github.com/ParkWardRR/cairn-modules/issues) | [CI](https://github.com/ParkWardRR/cairn-modules/actions) |
 
 <sub>Shared: [Roadmap](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md) · [Install](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/INSTALL.md) · [Architecture](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/docs/architecture.md) · [Threat model](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/docs/threat-model.md) · [Trust model](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/docs/trust-model-v3.md) · [Contracts](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/tree/main/contracts) · [Archive of the original monorepo](https://github.com/ParkWardRR/cairn-original-monorepo-archive)</sub>
 <!-- cairn-nav:end -->
-<img src="docs/images/app-icon.png" width="112" alt="Cairn Companion app icon">
+<p align="center"><img src="docs/images/app-icon.png" width="112" alt="Cairn Companion app icon"></p>
+<h1 align="center">Cairn Companion</h1>
+<p align="center"><strong>The iPhone app for Cairn, a self-hosted car driving log. It lends the dongle its GPS, carries the dongle's trips to your own server, and lets you browse them offline.</strong></p>
 
-# Cairn Companion
-
-**The iPhone app for Cairn, a self-hosted car driving log. It lends the dongle its GPS, carries the dongle's trips to your own server, and lets you browse them offline.**
-
-[![Test](https://github.com/ParkWardRR/cairn-ios-companion-app/actions/workflows/test.yml/badge.svg)](https://github.com/ParkWardRR/cairn-ios-companion-app/actions/workflows/test.yml)
-[![License: Blue Oak 1.0.0](https://img.shields.io/badge/license-Blue%20Oak%201.0.0-blue)](LICENSE)
-![Platform: iOS 18+](https://img.shields.io/badge/platform-iOS%2018%2B-black)
+<p align="center">
+  <a href="https://github.com/ParkWardRR/cairn-ios-companion-app/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/ParkWardRR/cairn-ios-companion-app/test.yml?style=flat-square&label=tests" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Blue_Oak_1.0.0-2E86C1?style=flat-square" alt="Blue Oak Model License 1.0.0"></a>
+  <img src="https://img.shields.io/badge/platform-iOS_18+-2E86C1?style=flat-square" alt="iOS 18 and later">
+  <img src="https://img.shields.io/badge/CarPlay-Driving_Task-27AE60?style=flat-square" alt="CarPlay Driving Task entitlement approved">
+  <img src="https://img.shields.io/badge/sign--in-passkey-27AE60?style=flat-square" alt="Passkey sign-in">
+  <img src="https://img.shields.io/badge/works-offline-95A5A6?style=flat-square" alt="Works with no server">
+</p>
 
 <p align="center">
   <img src="docs/images/streaming-light.png" width="270" alt="Drive tab streaming to the dongle, light mode">
@@ -41,25 +45,26 @@ The app does three jobs:
 
 It also works with no server at all: pairing, GPS assist, drive history, a garage with a maintenance log, and encrypted backup are all local ([standalone mode](#standalone-mode)).
 
-## Contents
-
-- [What the app does today](#what-the-app-does-today)
-- [Architecture](#architecture)
-- [BLE link and protocol](#ble-link-and-protocol)
-- [The relay path](#the-relay-path-and-why-the-phone-cannot-read-or-alter-bundles)
-- [Enrolment and request signing](#enrolment-and-request-signing)
-- [LAN, Tailnet and standalone mode](#lan-tailnet-and-standalone-mode)
-- [Local data, export and import](#local-data-export-and-import)
-- [Background behaviour](#background-behaviour)
-- [Privacy](#privacy)
-- [Build and run](#build-and-run)
-- [Testing](#testing)
-- [Demo mode and screenshots](#demo-mode-and-screenshots)
-- [Status and roadmap](#status-and-roadmap)
-- [Docs index](#docs-index)
-- [Troubleshooting](#troubleshooting)
-- [FAQ](#faq)
-- [Contributing](#contributing) and [License](#license)
+**Contents:**
+[What it does today](#what-the-app-does-today) ·
+[Architecture](#architecture) ·
+[BLE link](#ble-link-and-protocol) ·
+[The relay path](#the-relay-path-and-why-the-phone-cannot-read-or-alter-bundles) ·
+[Enrolment and signing](#enrolment-and-request-signing) ·
+[LAN, Tailnet, standalone](#lan-tailnet-and-standalone-mode) ·
+[Local data](#local-data-export-and-import) ·
+[Passkeys](#passkeys) ·
+[Background behaviour](#background-behaviour) ·
+[Privacy](#privacy) ·
+[Build and run](#build-and-run) ·
+[Testing](#testing) ·
+[Demo mode](#demo-mode-and-screenshots) ·
+[Status](#status) ·
+[Docs index](#docs-index) ·
+[Troubleshooting](#troubleshooting) ·
+[FAQ](#faq) ·
+[Contributing](#contributing) ·
+[License](#license)
 
 ## What the app does today
 
@@ -129,7 +134,7 @@ flowchart LR
   S --> W
 ```
 
-Dashed arrows are the relay path, which is specified but not yet implemented in this app. The firmware and server halves of it are implemented.
+Dashed arrows are the relay path. Its codec, session and transfer checks are implemented here and vector-checked; the **CoreBluetooth half is open** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)), so this app does not yet carry a bundle. The firmware and server halves are implemented and have run on hardware.
 
 ### Modules
 
@@ -142,7 +147,7 @@ flowchart TD
   CORE["CairnCore<br/>pure Swift: payloads, models,<br/>signing, server client, drive logic"]
   App --> RT
   RT --> CORE
-  T["CairnCoreTests<br/>163 tests, run on macOS"] --> CORE
+  T["CairnCoreTests<br/>333 tests in 66 suites, run on macOS"] --> CORE
   GRDB["GRDB.swift"] --> RT
   DDB["duckdb-swift"] --> RT
 ```
@@ -168,11 +173,11 @@ The normative spec is [`contracts/ble/v1/spec.md`](https://github.com/ParkWardRR
 | `COMPANION_STATUS` | `0011` | dongle to phone, notify 1 Hz | 8 B | Decoded; drives "Streaming" |
 | `PROTOCOL_VERSION` | `00F0` | read | 2 B | Read; accepts major version 1 only; required |
 | `BARO_ALT` | `0002` | phone to dongle | 4 B | Implemented, dormant until the firmware exposes it |
-| `UTC_SYNC` | `0003` | phone to dongle, on connect and each minute | 8 B | Implemented, dormant likewise |
+| `UTC_SYNC` | `0003` | phone to dongle, on connect and each minute | 8 B | Implemented. **The dongle now reads this**, and no client writes it yet, so turning it on here is the cheapest way to exercise the phone as a time source |
 | `OBD_LIVE` | `0020` | dongle to phone | 48 B | Decoded and shown if present |
 | `DEVICE_STATUS` | `0021` | dongle to phone | 12 B | Decoded and shown if present |
 | `OFFLOAD_CONTROL`, `OFFLOAD_DATA` | `0030`, `0031` | both | variable | **Not implemented in the app** |
-| Device information | `0040` to `0044` | dongle to phone | variable | **Not implemented in the app** |
+| Device information | `0040` to `0044` | dongle to phone | variable | Read: installed engines and capabilities, with a warning when the vehicle's engine is not compiled into the dongle. Not yet read from a real unit |
 
 The service UUID is `A8E3xxxx-4F5B-11EF-A017-325096B39F47`, with a 16-bit suffix per characteristic. The app scans by service UUID only; the name `Cairn` is display-only. `PROTOCOL_VERSION` byte 1 is a capabilities bitmap (bit 2 offload, bit 3 device information). The app reads it but does not use it yet.
 
@@ -384,6 +389,41 @@ The schema also reserves `outbox`, `syncState`, `tripSummary` and `enrolment` ta
 
 There is **no slow key-derivation step** (no PBKDF2, scrypt or Argon2), so the file's protection is only as strong as the passphrase. Use a long, random one and keep the file off shared storage.
 
+## Passkeys
+
+**Settings > Dashboard** (shown once a server is set up) signs this iPhone in to the web dashboard with a passkey, or makes one. It uses
+`AuthenticationServices` (`ASAuthorizationPlatformPublicKeyCredentialProvider`), Apple's own passkey API and the one
+Safari uses, so the passkey lives in iCloud Keychain, is unlocked with Face ID, and works in the app and in Safari
+alike. There is no password and no account in any cloud service.
+
+- **On your tailnet** the dashboard already recognises an allowed device, so the card says "Signed in: this phone is on
+  your tailnet" and needs nothing. A passkey is for when you are not on the tailnet, e.g. on home Wi-Fi.
+- **Sign in with a passkey** sends the dashboard's challenge to the system sheet and the answer back
+  (`PasskeyCodec`, `DashboardAuthClient` in CairnCore, tested). The session cookie it gets is kept, and **Open the
+  dashboard** shows the dashboard in the app with that session.
+- **Create a passkey on this iPhone**: the very first needs a tailnet device the dashboard allows, or the one-time code
+  from `bootstrap-code` on the server (the app asks for it); later ones need a passkey sign-in within five minutes. The
+  dashboard's rules for this are in its `docs/auth.md`.
+
+Setting it up (the address is yours and is never committed):
+
+1. In `Config/Local.xcconfig` set `CAIRN_PASSKEY_DOMAIN` to the dashboard's host name (see `Local.xcconfig.example`).
+   The entitlement is `webcredentials:<that host>`.
+2. On the dashboard host set `NUXT_AUTH_APPLE_APPS=<TEAMID>.<bundle id>` so it serves
+   `/.well-known/apple-app-site-association`.
+3. If the dashboard is only reachable on your own network, Apple's CDN cannot fetch that file. Add `?mode=developer`
+   to the domain, turn on **Settings > Developer > Associated Domains Development** on the phone, and use a
+   development-signed build: iOS then fetches the file from the device itself. A TestFlight or App Store build needs
+   the dashboard reachable from the internet instead.
+4. By default there is no dashboard address to type: **Same address as the server** is on, and the dashboard is the server
+   address from Settings with the port dropped (`https://cairn.example.lan:8444` gives `https://cairn.example.lan`),
+   because a passkey belongs to one host name. If your dashboard is on a different name, turn that off and type its
+   address. Either way it has to be a host name, not an IP address, for passkeys to work.
+
+What cannot be checked without a phone: the system passkey sheet itself. The simulator build compiles and runs, the
+conversion to and from the dashboard's JSON is unit-tested, and the dashboard side is exercised end to end by its
+acceptance suite with a software authenticator; the first real sign-in on a device is the remaining check.
+
 ## Background behaviour
 
 A windshield-mounted phone is routinely locked or running Maps, and the app is usually "launched" by the car powering the dongle, not by you.
@@ -439,7 +479,7 @@ If the dongle's bond is ever reset, forget "Cairn" under iOS Settings > Bluetoot
 
 ```sh
 scripts/fetch-contracts.sh          # fetch the pinned contracts into .contracts/ (git-ignored)
-cd CairnCompanion && swift test     # 163 test functions, all in CairnCore
+cd CairnCompanion && swift test     # 333 tests in 66 suites, all in CairnCore
 ```
 
 `swift build` produces a macOS debug build of both libraries. The tests need no radio, GPS or iPhone.
@@ -482,34 +522,41 @@ xcrun simctl io booted screenshot docs/images/streaming-light.png
   </tr>
 </table>
 
-## Status and roadmap
+## Status
 
-Three levels, kept apart on purpose: **on hardware** (the BLE link has run against the real dongle), **host-tested** (unit-tested on a Mac against vectors or fakes, not run end to end), **planned**.
+Three levels, kept apart on purpose: **on hardware** (it has run on a real iPhone, against the real dongle or the real dashboard), **built** (unit-tested on a Mac against vectors or fakes, never run end to end), **planned**.
+
+> **Where this is going** is not in this README, and is no longer in this repository. The project keeps **one** roadmap, for all six repositories: [ROADMAP.md](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md). This app's next work is [Phase 29](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md#phase-29--the-phone-becomes-the-app--in-progress) — becoming the dongle's relay instead of a reference client on a Mac — and then [Phase 35](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md#phase-35--routes-stretches-and-marking-a-drive--planned-two-decisions-open), routes and marking a drive.
 
 | Item | Level | Notes |
 |---|---|---|
-| Phase 0: design, protocol v1, validation matrix | Done | |
-| Phase 1: GPS assist (encode, bond, stream, acceptance feedback, auto-start, link health, drive history) | **On hardware** | Firmware rows done (dual recording, phone-state clearing, bond reset, golden vectors in C). Open: background wake from suspended and terminated, drive test (phone vs internal accuracy, battery, write rate), firmware stack / heap / IMU rows |
-| Phase 2: `BARO_ALT`, `UTC_SYNC`, `OBD_LIVE`, `DEVICE_STATUS` | Host-tested (app side) | Dormant: the shipped firmware exposes none of these yet. `CLHeading` not started |
-| Garage, maintenance, odometer, annotations, Trips filters | Built | Closed [#8](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/8) |
-| Encrypted local store, encrypted export / import | Built | |
-| Standalone mode, welcome flow, Bluetooth settings page | Built | |
-| LAN / Tailnet endpoint selection with diagnostics | Built, partial | Probe works; `instance_id` match and SPKI pinning not enforced |
-| Trip snapshot sync | Built, **legacy endpoint** | Calls an unauthenticated `/api/snapshot?format=tar`, which the committed server does not serve; the server's `/v1/snapshot` is signed. Not verified against a real server. Move to the authenticated API: [#7](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/7) |
-| Secure Enclave identity and `CairnServerClient` with signing | Host-tested | Closed [#2](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/2); no enrolment UI yet ([#1](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/1)); never run against a real server |
-| Bearer-token Keychain store, durable outbox, SyncEngine, background transfers | Planned | [#5](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/5); schema tables exist, unused |
-| **BLE bundle offload relay** | Planned | [#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14); the most important open item, because the app is the dongle's only uplink on shipped firmware |
-| Revocation, identity reset, admin screens | Planned | Client calls exist; no UI ([#10](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/10)) |
-| BLE session authentication and dongle identity | Planned, blocked | Needs firmware Phase 22 ([#9](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/9)); will bump `PROTOCOL_VERSION` major |
-| Read installed engines and capabilities; warn on a missing engine | Planned | [#27](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/27) |
-| Provision Wi-Fi / LTE over BLE; LTE usage and limits | Planned | [#28](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/28), [#30](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/30); firmware work comes first |
-| Multiple dongles; multiple phones and cars | Planned | [#26](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/26), [#19](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/19) |
-| Fast connect and offload (restoration, connection parameters) | Planned | [#29](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/29) |
-| Consume the sync/v1 vectors in CI | Partly done | Requests and responses are replayed locally; CI has no runner ([#31](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/31), [#12](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/12)) |
+| GPS assist: encode, bond, stream, acceptance feedback, auto-start, link health | **On hardware** | Runs against the real dongle, and the bond survives dongle reboots. Still needs a drive: background wake from suspended **and** from system-terminated, and the accuracy, battery and write-rate comparison against the dongle's own receiver |
+| Drive history, Garage, maintenance, odometer, annotations | **On hardware** | |
+| One-QR setup | **On hardware** | Scan one code from the dashboard's Add-a-phone page and the app is configured |
+| **Trips tab** | **On hardware** | Replaced History. Day-grouped trip cards, each with a small map, distance, duration, mpg and speed; a route map on tap |
+| **Passkey sign-in to the dashboard** | **Built** | Settings > Dashboard, using Apple's own `AuthenticationServices`. Everything around it is tested — the codec, the client, and the dashboard side against a software authenticator — but **the real system passkey sheet has never been through a device**. See [Passkeys](#passkeys) for the associated-domain setup, which is the first hurdle |
+| **CarPlay car screen** | **On hardware** | Apple **approved** the Driving Task entitlement on 2026-10-08, reversing the earlier decision to ship widgets instead. A read-only three-tab screen (Now, Trip, Device) under `CPTabBarTemplate`; a fixed row skeleton built once per connection and mutated in place, so a BLE dropout never reloads the list; readings faded through `LinkHealth.freshness`, with "never read" drawn differently from "reading zero". CarPlay is handed `SessionState` and never `DrivingSession`, so **the car screen cannot start or stop recording**. Signed, installed and running on a phone; a distribution export carries the capability. **Not yet seen on a car screen** — neither the CarPlay Simulator nor a head unit |
+| Encrypted local store, encrypted export and import | **Built** | |
+| Standalone mode, welcome flow, Bluetooth settings page | **Built** | |
+| Read the dongle's installed engines and warn on a missing one | **Built** | `DEVICE_INFO` over BLE, against the contract's vectors. Not yet read from a real unit |
+| Secure Enclave identity and `CairnServerClient` with per-request signing | **Built** | Checked against the server's published vectors. **No screen drives enrolment**, so a build of the app does not enrol with a server on its own; never run against a real server |
+| LAN / Tailnet endpoint selection with diagnostics | **Built, partial** | The probe works; the `instance_id` match and SPKI pinning are not enforced |
+| Trip snapshot sync | **Built, wrong endpoint** | Calls an unauthenticated `/api/snapshot?format=tar` that the committed server does not serve; the server's `/v1/snapshot` is signed ([#7](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/7)) |
+| **BLE bundle offload relay** | **Built, not wired** | The message codec, the session and the transfer checks landed 2026-10-06 and are replayed against the pinned offload vectors. The **CoreBluetooth half is open** ([#14](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/14)), so the app does not yet carry a bundle; `cmd/cairn-phone` in the server repository does, and is the reference this app matches. The single most important open item here |
+| `BARO_ALT`, `UTC_SYNC`, `OBD_LIVE`, `DEVICE_STATUS` | **Built, dormant** | The app side of all four is built and vector-tested, and no firmware build exposes them — except `UTC_SYNC`, which the dongle now *reads* and no client yet *writes*, so this app writing it is the cheapest way to exercise the phone time source |
+| Bearer-token store, durable outbox, `SyncEngine`, background transfers | Planned | [#5](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/5); the schema tables exist and are unused |
+| Enrolment UI | Planned | [#13](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/13) |
+| Revocation, identity reset, admin screens | Planned | The client calls exist; there is no UI ([#10](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/10)) |
+| BLE session authentication and dongle identity | Planned, blocked | Needs the firmware's enrolled-app challenge ([#9](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/9)); will bump `PROTOCOL_VERSION` major |
+| Provision Wi-Fi and LTE over BLE; LTE usage and limits | Planned | [#28](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/28), [#30](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/30); the firmware's config receiver comes first |
+| Several dongles; several phones and cars | Planned | [#26](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/26), [#19](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/19) |
+| Fast connect and fast offload (state restoration, connection parameters) | Planned | [#29](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/29) |
+| Routes, stretches and marking a drive by voice or one tap | Planned, two decisions open | Designed in [`docs/routes-and-marking.md`](docs/routes-and-marking.md); scheduled as roadmap Phase 35. Nothing started |
 | Share sheet for trips | Planned, blocked | On `share/v1` ([#22](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/22)) |
-| Widgets and Live Activities | Planned | Chosen over CarPlay, which needs an entitlement an OBD logger will not get ([note](docs/carplay-design.md)) |
+| Widgets and Live Activities | Planned | Still worth doing on their own merits: the Lock Screen and StandBy reach a phone on a mount in a car with no head unit at all |
+| `sync/v1` vectors in CI | **Done** | Requests and responses are replayed against the pinned vectors, and CI has had a macOS runner since 2026-10-08 ([#31](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/31)) |
 
-Per-item checklists live in [`docs/roadmap.md`](docs/roadmap.md) (partly stale; see the docs index). The system roadmap is in the [front door](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md); the v3 tracking issue is [#13](https://github.com/ParkWardRR/cairn-ios-companion-app/issues/13).
+**The contracts pin is `contracts-v0.2.0`, three releases behind.** That is a choice rather than a bug — this app bumps when it needs a change — but it is what stands between it and `engine/v1`, `module/v1`, `DEVICE_INFO` out of draft, the `TIME_OBSERVATION` record and manifest key 29.
 
 ## Docs index
 
@@ -519,17 +566,18 @@ Per-item checklists live in [`docs/roadmap.md`](docs/roadmap.md) (partly stale; 
 | [`docs/firmware-changes.md`](docs/firmware-changes.md) | ESP32 changes for phone GNSS: source state, selection policy, `source_flags` bit 5, storage |
 | [`docs/ios-app.md`](docs/ios-app.md) | Original Phase 1 app design: stack, background session, encoding rules (older than the current layout) |
 | [`docs/validation.md`](docs/validation.md) | Acceptance tests for protocol, sample handling, drive, storage and resources |
-| [`docs/roadmap.md`](docs/roadmap.md) | Phase checklists (Phases 0 to 3 and v3) |
+| [`docs/routes-and-marking.md`](docs/routes-and-marking.md) | **Design, not started.** Routes, stretches, and marking a drive by voice or one tap: the model, the two open naming decisions, capture, the spoken phrases, and review afterwards |
 | [`docs/decisions.md`](docs/decisions.md) | Numbered decisions, design-review changes, platform corrections, open questions |
 | [`docs/plan-link-health-and-history.md`](docs/plan-link-health-and-history.md) | Link-health UI and History tab plan |
 | [`docs/full-plan.md`](docs/full-plan.md) | The complete original plan document |
-| [`docs/carplay-design.md`](docs/carplay-design.md) | Why widgets and Live Activities, not CarPlay |
+| [`docs/carplay.md`](docs/carplay.md) | The car screen that shipped: templates, the fixed row skeleton, freshness, and why CarPlay never sees `DrivingSession` |
+| [`docs/carplay-design.md`](docs/carplay-design.md) | **Superseded 2026-10-08**, when Apple approved the Driving Task entitlement. It argued for widgets on the grounds that approval was unlikely; its widget analysis still stands on its own |
 | [`HANDOFF-FIRMWARE.md`](HANDOFF-FIRMWARE.md) | Firmware work list, what the app tolerates, the firmware's 2026-10-03 response, and the future BLE-authentication changes |
 | [`ui-ux-overhaul.md`](ui-ux-overhaul.md) | Four-tab restructure plan, Phases A to F, with what is done |
 | [`CLAUDE.md`](CLAUDE.md) | Build, architecture and security constraints for AI coding assistants |
 | [`contracts.lock`](contracts.lock) | The pinned contracts release |
 | [`scripts/fetch-contracts.sh`](scripts/fetch-contracts.sh) | Fetches and verifies the pinned contracts |
-| [Cairn front door](https://github.com/ParkWardRR/cairn-driving-log-selfhosted) | System docs, ROADMAP, threat and trust models, the shared `contracts/` |
+| [Cairn front door](https://github.com/ParkWardRR/cairn-driving-log-selfhosted) | System docs, the **one** [roadmap](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md) for all six repositories, the threat and trust models, and the shared `contracts/` |
 
 ## Troubleshooting
 
@@ -577,43 +625,20 @@ To share diagnostics, open the Files app > Cairn and send `cairn-drive.log`. It 
 
 Open an issue before large changes. The project is contract-first: protocol changes start in the [front door's `contracts/`](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/tree/main/contracts) with updated vectors, then the firmware and this app follow; do not edit pinned vectors here. Before a pull request, run `scripts/fetch-contracts.sh` and `swift test` on a Mac. No secrets in the repo: the BLE passkey belongs in the firmware's gitignored `secrets.h`, signing values in the gitignored `Config/Local.xcconfig`, and server URLs on the device only (use `cairn.example.lan` in docs and code). Workflows must use `runs-on: self-hosted`, never GitHub-hosted runners.
 
-Related repositories: [front door and roadmap](https://github.com/ParkWardRR/cairn-driving-log-selfhosted), [server](https://github.com/ParkWardRR/cairn-vehicle-server), [firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware), [web dashboard](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard).
+**CI runs on a macOS runner on the author's Mac, not on the Podman host that serves the other four repositories** — a Linux runner cannot build this package, because `swift test` builds the whole graph including `CairnRuntime`, which imports CoreBluetooth, CoreLocation, UIKit and CryptoKit. Only `CairnCore` is platform-free, and SwiftPM will not build the test target without the rest. If CI sits queued, the runner's LaunchAgent is down; it has stopped once when Xcode's derived data filled the disk.
+
+**Do not add a roadmap here.** The project keeps one, in the front door repository. This README's [Status](#status) says what the app has running; the plan, and what the firmware and server owe this app, live there.
+
+## Related repositories
+
+| Repository | What it is to this app |
+|---|---|
+| [cairn-driving-log-selfhosted](https://github.com/ParkWardRR/cairn-driving-log-selfhosted) | The front door — system docs, the one [roadmap](https://github.com/ParkWardRR/cairn-driving-log-selfhosted/blob/main/ROADMAP.md), and the `contracts/` this app pins |
+| [cairn-esp32-device-firmware](https://github.com/ParkWardRR/cairn-esp32-device-firmware) | The dongle on the other end of the BLE link |
+| [cairn-vehicle-server](https://github.com/ParkWardRR/cairn-vehicle-server) | The server this app enrols with, and `cmd/cairn-phone`, the Go reference client this app is matching |
+| [cairn-vehicle-web-dashboard](https://github.com/ParkWardRR/cairn-vehicle-web-dashboard) | The dashboard this app signs into with a passkey |
+| [cairn-modules](https://github.com/ParkWardRR/cairn-modules) | The modules whose `ios` block this app will consume |
 
 ## License
 
 [Blue Oak Model License 1.0.0](LICENSE)
-
-## Passkeys
-
-**Settings > Dashboard** (shown once a server is set up) signs this iPhone in to the web dashboard with a passkey, or makes one. It uses
-`AuthenticationServices` (`ASAuthorizationPlatformPublicKeyCredentialProvider`), Apple's own passkey API and the one
-Safari uses, so the passkey lives in iCloud Keychain, is unlocked with Face ID, and works in the app and in Safari
-alike. There is no password and no account in any cloud service.
-
-- **On your tailnet** the dashboard already recognises an allowed device, so the card says "Signed in: this phone is on
-  your tailnet" and needs nothing. A passkey is for when you are not on the tailnet, e.g. on home Wi-Fi.
-- **Sign in with a passkey** sends the dashboard's challenge to the system sheet and the answer back
-  (`PasskeyCodec`, `DashboardAuthClient` in CairnCore, tested). The session cookie it gets is kept, and **Open the
-  dashboard** shows the dashboard in the app with that session.
-- **Create a passkey on this iPhone**: the very first needs a tailnet device the dashboard allows, or the one-time code
-  from `bootstrap-code` on the server (the app asks for it); later ones need a passkey sign-in within five minutes. The
-  dashboard's rules for this are in its `docs/auth.md`.
-
-Setting it up (the address is yours and is never committed):
-
-1. In `Config/Local.xcconfig` set `CAIRN_PASSKEY_DOMAIN` to the dashboard's host name (see `Local.xcconfig.example`).
-   The entitlement is `webcredentials:<that host>`.
-2. On the dashboard host set `NUXT_AUTH_APPLE_APPS=<TEAMID>.<bundle id>` so it serves
-   `/.well-known/apple-app-site-association`.
-3. If the dashboard is only reachable on your own network, Apple's CDN cannot fetch that file. Add `?mode=developer`
-   to the domain, turn on **Settings > Developer > Associated Domains Development** on the phone, and use a
-   development-signed build: iOS then fetches the file from the device itself. A TestFlight or App Store build needs
-   the dashboard reachable from the internet instead.
-4. By default there is no dashboard address to type: **Same address as the server** is on, and the dashboard is the server
-   address from Settings with the port dropped (`https://cairn.example.lan:8444` gives `https://cairn.example.lan`),
-   because a passkey belongs to one host name. If your dashboard is on a different name, turn that off and type its
-   address. Either way it has to be a host name, not an IP address, for passkeys to work.
-
-What cannot be checked without a phone: the system passkey sheet itself. The simulator build compiles and runs, the
-conversion to and from the dashboard's JSON is unit-tested, and the dashboard side is exercised end to end by its
-acceptance suite with a software authenticator; the first real sign-in on a device is the remaining check.
